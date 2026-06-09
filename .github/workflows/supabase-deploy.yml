@@ -21,10 +21,25 @@ jobs:
       - name: Validar GitHub Pages + Supabase
         run: npm run check
 
+      - name: Verificar segredo do Supabase
+        id: supabase-secret
+        shell: bash
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::SUPABASE_DB_URL nao configurado. A validacao do sistema continuara, mas o schema nao sera aplicado automaticamente."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Instalar cliente PostgreSQL
+        if: steps.supabase-secret.outputs.configured == 'true'
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Aplicar schema Supabase
+        if: steps.supabase-secret.outputs.configured == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: psql "$SUPABASE_DB_URL" -f supabase.sql
