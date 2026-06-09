@@ -1,7 +1,7 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
+﻿import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('PREENCHA')) {
-  throw new Error('Configuracao do Supabase ausente.');
+  throw new Error('Configuração do Supabase ausente.');
 }
 
 const TABLE = 'avd_app_state';
@@ -21,8 +21,8 @@ const filterMap = {
   disciplina: 'DISCIPLINA',
   aluno: 'NOME',
   nivel: 'NIVEL',
-  raca: 'RAÃ‡A',
-  inclusao: 'INCLUSÃƒO',
+  raca: 'RAÇA',
+  inclusao: 'INCLUSÃO',
 };
 const filterOrder = ['avaliacao', 'unidade', 'ano', 'turma', 'disciplina', 'aluno', 'nivel', 'raca', 'inclusao'];
 
@@ -97,7 +97,7 @@ function ensureDb(value) {
 function supabaseError(error) {
   const message = error?.message || String(error || '');
   if (message.includes('Failed to fetch') || error instanceof TypeError) {
-    return { status: 503, error: 'Nao foi possivel acessar o Supabase.', detail: `Falha de conexao com ${SUPABASE_URL}. Confira se o projeto esta ativo e se o supabase.sql foi executado.` };
+    return { status: 503, error: 'Não foi possível acessar o Supabase.', detail: `Falha de conexão com ${SUPABASE_URL}. Confira se o projeto está ativo e se o supabase.sql foi executado.` };
   }
   return { status: 500, error: 'Falha ao acessar Supabase.', detail: message };
 }
@@ -156,9 +156,10 @@ async function writeDb(db) {
 }
 
 function parseToken(token) {
-  const parts = String(token || '').split('-');
-  if (parts[0] !== 'avd' || !parts[1]) return null;
-  return parts[1];
+  const value = String(token || '');
+  if (value.startsWith('avd:')) return value.split(':')[1] || null;
+  const legacy = value.match(/^avd-(.+)-\d+$/);
+  return legacy?.[1] || null;
 }
 
 function currentUser(db, token) {
@@ -249,14 +250,14 @@ function round(value, digits = 1) {
 
 function groupCount(rows, field) {
   const map = new Map();
-  for (const row of rows) map.set(row[field] || 'Nao informado', (map.get(row[field] || 'Nao informado') || 0) + 1);
+  for (const row of rows) map.set(row[field] || 'Não informado', (map.get(row[field] || 'Não informado') || 0) + 1);
   return [...map.entries()].map(([label, value]) => ({ label, value }));
 }
 
 function ranking(rows, field) {
   const map = new Map();
   for (const row of rows) {
-    const key = row[field] || 'Nao informado';
+    const key = row[field] || 'Não informado';
     const item = map.get(key) || { label: key, alunos: 0, pontos: 0, possiveis: 0 };
     item.alunos += 1;
     item.pontos += Number(row.PONTOS || 0);
@@ -373,13 +374,13 @@ async function request(method, path, data = undefined, options = {}) {
     const email = normalizeEmail(data?.email);
     const password = String(data?.password || '');
     const user = db.users.find((item) => normalizeEmail(item.email) === email && item.ativo && String(item.senha || item.password || '') === password);
-    if (!user) throw { status: 401, error: 'E-mail ou senha invalidos.' };
+    if (!user) throw { status: 401, error: 'E-mail ou senha inválidos.' };
     log(db, user, 'LOGIN');
     await writeDb(db);
-    return { token: `avd-${user.id}-${Date.now()}`, refreshToken: `refresh-${user.id}-${Date.now()}`, user: publicUser(user), permissions: db.permissions[user.perfil] };
+    return { token: `avd:${user.id}:${Date.now()}`, refreshToken: `refresh:${user.id}:${Date.now()}`, user: publicUser(user), permissions: db.permissions[user.perfil] };
   }
   const user = currentUser(db, options.token);
-  if (!user) throw { status: 401, error: 'Sessao invalida ou expirada.' };
+  if (!user) throw { status: 401, error: 'Sessão inválida ou expirada.' };
   if (method === 'GET' && route === 'me') return { user: publicUser(user), permissions: db.permissions[user.perfil] };
   if (method === 'POST' && route === 'auth/logout') return { ok: true };
   if (method === 'POST' && route === 'auth/change-password') {
@@ -418,7 +419,7 @@ async function request(method, path, data = undefined, options = {}) {
   }
   if (method === 'PUT' && p[0] === 'admin' && p[1] === 'users' && p[2]) {
     const item = db.users.find((entry) => entry.id === p[2]);
-    if (!item) throw { status: 404, error: 'Usuario nao encontrado.' };
+    if (!item) throw { status: 404, error: 'Usuário não encontrado.' };
     Object.assign(item, data || {});
     if (data?.email) item.email = normalizeEmail(data.email);
     if (data?.senha) item.senha = data.senha;
@@ -441,11 +442,11 @@ async function request(method, path, data = undefined, options = {}) {
     await writeDb(db);
     return { ok: true, registrosRemovidos: before - db.records.length, totalImportacoes: db.imports.length, kpis: dashboard(filteredRecords(db, user, {})).kpis };
   }
-  if (method === 'POST' && route === 'imports/preview') throw { status: 501, error: 'Importacao via GitHub Pages requer carga previa dos dados no Supabase.' };
-  if (method === 'POST' && route === 'imports/commit') throw { status: 501, error: 'Importacao via GitHub Pages requer carga previa dos dados no Supabase.' };
-  if (method === 'GET' && (route === 'reports/pdf' || route === 'analysis/questions/pdf')) return new Blob(['Relatorio disponivel na visualizacao da tela.'], { type: 'application/pdf' });
+  if (method === 'POST' && route === 'imports/preview') throw { status: 501, error: 'Importação via GitHub Pages requer carga prévia dos dados no Supabase.' };
+  if (method === 'POST' && route === 'imports/commit') throw { status: 501, error: 'Importação via GitHub Pages requer carga prévia dos dados no Supabase.' };
+  if (method === 'GET' && (route === 'reports/pdf' || route === 'analysis/questions/pdf')) return new Blob(['Relatório disponível na visualização da tela.'], { type: 'application/pdf' });
   if (method === 'GET' && route === 'export/excel') return new Blob([csv(tableRows(filteredRecords(db, user, filtersFrom(path)), 100000))], { type: 'text/csv;charset=utf-8' });
-  throw { status: 404, error: 'Rota nao encontrada.' };
+  throw { status: 404, error: 'Rota não encontrada.' };
 }
 
 function csv(rows) {
