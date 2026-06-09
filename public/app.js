@@ -844,7 +844,7 @@ function qualityView() {
     ${filtersHtml()}
     <section class="card">
       <h3>Qualidade dos dados</h3>
-      ${q ? `<p>Total analisado: <strong>${q.total}</strong> | Chaves duplicadas: <strong>${q.duplicatés}</strong></p>
+      ${q ? `<p>Total analisado: <strong>${q.total}</strong> | Chaves duplicadas: <strong>${q.duplicates}</strong></p>
       <div class="table-wrap"><table><thead><tr><th>Campo</th><th>Vazios</th></tr></thead><tbody>
         ${Object.entries(q.emptyByField).map(([field, count]) => `<tr><td>${field}</td><td>${count}</td></tr>`).join("") || "<tr><td colspan='2'>Sem campos obrigatorios vazios.</td></tr>"}
       </tbody></table></div>` : "<p>Carregando...</p>"}
@@ -1569,7 +1569,7 @@ function renderImportPreview(result, activeTab) {
   const tabs = [
     ["schema", "Configuração", notifications.schema.length],
     ["validation", "Validação", notifications.validation.length],
-    ["duplicatés", "Duplicidades", notifications.duplicatés.length],
+    ["duplicates", "Duplicidades", notifications.duplicates.length],
     ["columns", "Colunas", result.headers.length],
     ["sample", "Amostra", result.sample.length],
   ];
@@ -1650,7 +1650,7 @@ function importNotifications(result) {
   return {
     schema: result.schemaWarnings || [],
     validation: result.validationErrors || [],
-    duplicatés: result.duplicatés ? [{ severity: "alerta", catégory: "Duplicidade", row: "-", column: "NOME/AVALIACAO/DISCIPLINA/TURMA/UNIDADE", message: `${result.duplicatés} duplicidades detectadas na planilha.` }] : [],
+    duplicates: result.duplicates ? [{ severity: "alerta", category: "Duplicidade", row: "-", column: "NOME/AVALIACAO/DISCIPLINA/TURMA/UNIDADE", message: `${result.duplicates} duplicidades detectadas na planilha.` }] : [],
   };
 }
 
@@ -1666,7 +1666,7 @@ function previewTable(activeTab, result, notifications) {
   if (!rows.length) return `<div class="empty-box">Nenhuma notificação para esta conferência.</div>`;
   return simpleTable(["Severidade", "Catégoria", "Linha", "Campo", "Mensagem"], rows.map((item) => [
     item.severity || "info",
-    item.catégory || "Validação",
+    item.category || "Validação",
     item.row ?? "-",
     item.column || "-",
     item.message || "",
@@ -1693,7 +1693,8 @@ async function api(url, options = {}) {
   try {
     return await window.AVD_DB_REQUEST(options.method || "GET", url, options.body || options.form, { token: state.token, auth: options.auth !== false });
   } catch (error) {
-    throw new Error(error?.error || error?.message || "Falha na requisicao.");
+    const message = error?.error || error?.message || "Falha na requisicao.";
+    throw new Error(error?.detail ? `${message} ${error.detail}` : message);
   }
 }
 

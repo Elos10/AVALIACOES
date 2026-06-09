@@ -7,6 +7,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('PREENCHA')) {
 const TABLE = 'avd_app_state';
 const DB_ID = 'db';
 const REST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
+const importPreviewCache = new Map();
 const roles = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   GESTOR_SEMED: 'GESTOR SEMED',
@@ -457,8 +458,10 @@ async function previewImport(db, user, form) {
     seen.add(key);
   }
   const previewId = id('prev_');
-  db.importPreviews = (db.importPreviews || []).filter((item) => item.usuarioEmail !== user.email).slice(0, 10);
-  db.importPreviews.unshift({
+  for (const [key, preview] of importPreviewCache.entries()) {
+    if (preview.usuarioEmail === user.email) importPreviewCache.delete(key);
+  }
+  importPreviewCache.set(previewId, {
     id: previewId,
     usuarioEmail: user.email,
     nomeArquivo: file?.name || 'planilha.xlsx',
@@ -466,7 +469,6 @@ async function previewImport(db, user, form) {
     rows: parsed.rows,
     criadaEm: new Date().toISOString(),
   });
-  await writeDb(db);
   return {
     previewId,
     fileName: file?.name || 'planilha.xlsx',
@@ -481,7 +483,7 @@ async function previewImport(db, user, form) {
 }
 
 async function commitImport(db, user, previewId) {
-  const preview = (db.importPreviews || []).find((item) => item.id === previewId && item.usuarioEmail === user.email);
+  const preview = importPreviewCache.get(previewId) || (db.importPreviews || []).find((item) => item.id === previewId && item.usuarioEmail === user.email);
   if (!preview) throw { status: 404, error: 'Conferência não encontrada. Confira a planilha novamente.' };
   const importId = id('imp_');
   const existingByKey = new Map((db.records || []).map((row) => [duplicateKey(row), row]));
@@ -510,6 +512,7 @@ async function commitImport(db, user, previewId) {
   };
   db.imports.unshift(importInfo);
   db.importPreviews = (db.importPreviews || []).filter((item) => item.id !== previewId);
+  importPreviewCache.delete(previewId);
   log(db, user, 'IMPORTOU_PLANILHA', importInfo);
   await writeDb(db);
   return { ok: true, importacao: importInfo, kpis: dashboard(recordsForUser(db, user)) };
