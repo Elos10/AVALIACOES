@@ -108,7 +108,7 @@ function loginView() {
   return `
     <section class="login">
       <div class="login-panel">
-        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educacao de Uberaba">
+        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educacao de Uberaba" onerror="this.style.display='none'">
         <h1>AVD Diagnostico Escolar</h1>
         <p>Consulta, analise e relatorios diagnosticos por perfil de acesso.</p>
         ${alertHtml()}
