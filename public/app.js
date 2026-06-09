@@ -1,6 +1,6 @@
 ﻿const APP_ASSET_BASE = new URL(".", import.meta.url);
 
-const staté = {
+const state = {
   token: localStorage.getItem("token"),
   refreshToken: localStorage.getItem("refreshToken"),
   user: null,
@@ -84,11 +84,11 @@ const chartRegistry = new Map();
 boot();
 
 async function boot() {
-  if (staté.token) {
+  if (state.token) {
     try {
       const me = await api("/me");
-      staté.user = me.user;
-      staté.permissions = me.permissions;
+      state.user = me.user;
+      state.permissions = me.permissions;
       await loadDashboard();
     } catch {
       logoutLocal();
@@ -99,7 +99,7 @@ async function boot() {
 
 function render() {
   app.dataset.loaded = "true";
-  app.innerHTML = staté.user ? shell() : loginView();
+  app.innerHTML = state.user ? shell() : loginView();
   bind();
   drawCharts();
 }
@@ -132,18 +132,18 @@ function shell() {
     ["comparativo", "Comparativo", "comparativo"],
     ["importacoes", "Importações", "importacoes"],
     ["admin", "Administração", "admin"],
-  ].filter(([, , permissionKey]) => staté.permissions[permissionKey] !== false);
+  ].filter(([, , permissionKey]) => state.permissions[permissionKey] !== false);
   return `
     <section class="shell">
       <aside class="sidebar">
         <div class="brand">AVD</div>
         <div class="user-box">
-          <strong>${staté.user.perfil}</strong><br>
-          ${staté.user.email}<br>
-          <span>${staté.user.unidadeEscolar || ""}</span>
+          <strong>${state.user.perfil}</strong><br>
+          ${state.user.email}<br>
+          <span>${state.user.unidadeEscolar || ""}</span>
         </div>
         <nav class="nav">
-          ${nav.map(([key, label, , child]) => `<button data-view="${key}" class="${staté.view === key ? "active" : ""} ${child ? "nav-child" : ""}">${label}</button>`).join("")}
+          ${nav.map(([key, label, , child]) => `<button data-view="${key}" class="${state.view === key ? "active" : ""} ${child ? "nav-child" : ""}">${label}</button>`).join("")}
           <button id="logout">Sair</button>
         </nav>
         <div class="sidebar-logo"><img src="${assetPath("logo-detic.png")}" alt="DETIC"></div>
@@ -159,16 +159,16 @@ function shell() {
 }
 
 function viewHtml() {
-  if (staté.view === "admin") return adminView();
-  if (staté.view === "importacoes") return importView();
-  if (staté.view === "analise") return analysisView();
-  if (staté.view === "analiseQuestoes") return questionAnalysisView();
-  if (staté.view === "bncc") return bnccView();
-  if (staté.view === "curriculoMunicipal") return curriculoMunicipalView();
-  if (staté.view === "habilidadesAplicadas") return habilidadesAplicadasView();
-  if (staté.view === "relatorios") return reportsView();
-  if (staté.view === "qualidade") return qualityView();
-  if (staté.view === "comparativo") return compareView();
+  if (state.view === "admin") return adminView();
+  if (state.view === "importacoes") return importView();
+  if (state.view === "analise") return analysisView();
+  if (state.view === "analiseQuestoes") return questionAnalysisView();
+  if (state.view === "bncc") return bnccView();
+  if (state.view === "curriculoMunicipal") return curriculoMunicipalView();
+  if (state.view === "habilidadesAplicadas") return habilidadesAplicadasView();
+  if (state.view === "relatorios") return reportsView();
+  if (state.view === "qualidade") return qualityView();
+  if (state.view === "comparativo") return compareView();
   return dashboardView();
 }
 
@@ -179,25 +179,25 @@ function pageActionsHtml() {
 }
 
 function filtersHtml() {
-  return `<section class="filters ${staté.loading ? "is-loading" : ""}">
-    <div class="filter-status">${staté.loading ? "Atualizando filtros..." : "Filtros inteligentes em tempo real"}</div>
+  return `<section class="filters ${state.loading ? "is-loading" : ""}">
+    <div class="filter-status">${state.loading ? "Atualizando filtros..." : "Filtros inteligentes em tempo real"}</div>
     ${filterOrder.map((key) => `
       <label>${filterLabels[key]}
-        <select data-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${staté.loading ? "disabled" : ""}>
+        <select data-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${state.loading ? "disabled" : ""}>
           <option value="">Todos</option>
-          ${(staté.options[key] || []).map((v) => `<option ${isSelectedFilter(key, v) ? "selected" : ""}>${esc(v)}</option>`).join("")}
+          ${(state.options[key] || []).map((v) => `<option ${isSelectedFilter(key, v) ? "selected" : ""}>${esc(v)}</option>`).join("")}
         </select>
       </label>`).join("")}
-    <div class="toolbar filter-actions"><button id="clearFilters" ${staté.loading ? "disabled" : ""}>Limpar filtros</button></div>
+    <div class="toolbar filter-actions"><button id="clearFilters" ${state.loading ? "disabled" : ""}>Limpar filtros</button></div>
   </section>`;
 }
 
 function dashboardView() {
-  const k = staté.dashboard?.kpis || {};
-  const hasFilters = Object.keys(staté.filters).length > 0;
+  const k = state.dashboard?.kpis || {};
+  const hasFilters = Object.keys(state.filters).length > 0;
   return `
     ${filtersHtml()}
-    ${!hasFilters ? dashboardStartStaté() : `
+    ${!hasFilters ? dashboardStartState() : `
       <section class="kpis">
       ${kpi("Alunos avaliados", k.totalAlunos || 0)}
       ${kpi("Pontos possíveis", k.pontosPossiveis || 0)}
@@ -212,12 +212,12 @@ function dashboardView() {
       </section>
       <section class="card">
       <div class="toolbar"><h3>Tabela consolidada</h3><button id="exportCsv">Exportar Excel/CSV</button></div>
-      ${emptyStaté()}
-      ${tableHtml(staté.rows)}
+      ${emptyState()}
+      ${tableHtml(state.rows)}
       </section>`}`;
 }
 
-function dashboardStartStaté() {
+function dashboardStartState() {
   return `<section class="card dashboard-start">
     <h3>Selecione os filtros para visualizar os resultados</h3>
     <p class="muted">As informações do dashboard serão carregadas somente após você indicar quais dados deseja consultar nos filtros acima.</p>
@@ -225,11 +225,11 @@ function dashboardStartStaté() {
 }
 
 function analysisView(showFilters = true, requireFilters = false) {
-  const a = staté.analysis;
+  const a = state.analysis;
   const hasFilters = hasReportFilters();
   return `
     ${showFilters ? filtersHtml() : ""}
-    ${requireFilters && !hasFilters ? reportStartStaté() : `
+    ${requireFilters && !hasFilters ? reportStartState() : `
     <section class="card">
       <h3>Relatorio de analise diagnostica</h3>
       <p class="muted">Leitura pedagogica dos resultados filtrados, com indicacoes de prioridades para recomposicao e melhoria das notas.</p>
@@ -261,9 +261,9 @@ function analysisView(showFilters = true, requireFilters = false) {
 }
 
 function questionAnalysisView(showFilters = true, useReportFilters = false) {
-  const data = staté.questionAnalysis;
+  const data = state.questionAnalysis;
   const k = data?.kpis || {};
-  const consolidatédRows = consolidatédQuestionRows(data?.rows || []);
+  const consolidatedRows = consolidatedQuestionRows(data?.rows || []);
   const hasFilters = useReportFilters ? hasReportFilters() : hasQuestionAnalysisFilters();
   return `
     ${showFilters ? questionAnalysisFiltersHtml() : ""}
@@ -275,11 +275,11 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
       <div class="toolbar">
         <h3>Relatorio analitico</h3>
         <button class="primary" id="questionAnalysisPdf">Criar Relatorio em PDF</button>
-        <button id="questionImmersion" class="${staté.showQuestionImmersion ? "active" : ""}">Imersao</button>
+        <button id="questionImmersion" class="${state.showQuestionImmersion ? "active" : ""}">Imersao</button>
       </div>
       <p class="muted">O PDF sera gerado em A4 paisagem, com fonte Arial tamanho 11, respeitando os filtros aplicados. A Imersao consolida acoes pedagogicas do Currículo Municipal a partir das questoes filtradas.</p>
     </section>
-    ${staté.showQuestionImmersion ? questionImmersionView(data) : ""}
+    ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
       ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0)}
       ${kpi("Com dados correlatos", k.habilidadesComDados || 0)}
@@ -298,42 +298,42 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
     </section>
     <section class="card">
       <h3>Análise diagnóstica por habilidade e questão</h3>
-      ${consolidatédRows.length ? `<div class="question-analysis-list">
-        ${consolidatédRows.map((row) => questionAnalysisCard(row)).join("")}
+      ${consolidatedRows.length ? `<div class="question-analysis-list">
+        ${consolidatedRows.map((row) => questionAnalysisCard(row)).join("")}
       </div>` : `<div class="empty-box">Nenhum cadastro de habilidade aplicada encontrado para os filtros selecionados.</div>`}
     </section>`}`;
 }
 
 function hasQuestionAnalysisFilters() {
   return questionAnalysisFilterOrder.some((key) => {
-    const value = staté.filters[key];
+    const value = state.filters[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });
 }
 
 function hasReportFilters() {
   return filterOrder.some((key) => {
-    const value = staté.filters[key];
+    const value = state.filters[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });
 }
 
 function questionAnalysisFiltersHtml() {
-  const options = staté.questionAnalysis?.options || {};
-  return `<section class="filters ${staté.loading ? "is-loading" : ""}">
-    <div class="filter-status">${staté.loading ? "Atualizando analise..." : "Filtros da analise diagnostica das questoes"}</div>
+  const options = state.questionAnalysis?.options || {};
+  return `<section class="filters ${state.loading ? "is-loading" : ""}">
+    <div class="filter-status">${state.loading ? "Atualizando analise..." : "Filtros da analise diagnostica das questoes"}</div>
     ${questionAnalysisFilterOrder.map((key) => `
       <label>${questionAnalysisFilterLabels[key]}
-        <select data-question-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${staté.loading ? "disabled" : ""}>
+        <select data-question-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${state.loading ? "disabled" : ""}>
           <option value="">Todos</option>
           ${(options[key] || []).map((value) => `<option value="${esc(value)}" ${isSelectedFilter(key, value) ? "selected" : ""}>${esc(value)}</option>`).join("")}
         </select>
       </label>`).join("")}
-    <div class="toolbar filter-actions"><button id="clearQuestionFilters" ${staté.loading ? "disabled" : ""}>Limpar filtros</button></div>
+    <div class="toolbar filter-actions"><button id="clearQuestionFilters" ${state.loading ? "disabled" : ""}>Limpar filtros</button></div>
   </section>`;
 }
 
-function consolidatédQuestionRows(rows) {
+function consolidatedQuestionRows(rows) {
   const groups = new Map();
   for (const row of rows || []) {
     const key = row.questao || `Q${row.questaoNumero || ""}`;
@@ -457,7 +457,7 @@ function questionImmersionView(data) {
 }
 
 function buildQuestionImmersionPlan(data) {
-  const rows = consolidatédQuestionRows(data?.rows || [])
+  const rows = consolidatedQuestionRows(data?.rows || [])
     .filter((row) => row && row.correlato !== false)
     .sort((a, b) => Number(a.percentual || 0) - Number(b.percentual || 0) || Number(a.questaoNumero || 0) - Number(b.questaoNumero || 0));
   const high = rows.filter((row) => Number(row.percentual || 0) < 50);
@@ -557,7 +557,7 @@ function answerDistributionHtml(row) {
   const distribution = row.distribuicaoRespostas || {};
   const total = Math.max(row.avaliados || 0, 1);
   const keys = ["A", "B", "C", "D", "E"];
-  const selected = staté.questionAnswerSelection?.[row.id] || "";
+  const selected = state.questionAnswerSelection?.[row.id] || "";
   return `<div class="answer-distribution">
     ${keys.map((key) => {
       const value = Number(distribution[key] || 0);
@@ -587,14 +587,14 @@ function answerDetailHtml(row, alternative) {
 }
 
 function reportsView() {
-  const stats = staté.statistics;
+  const stats = state.statistics;
   const hasFilters = hasReportFilters();
-  if (staté.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${analysisView(false, true)}`;
-  if (staté.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${questionAnalysisView(false, true)}`;
+  if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${analysisView(false, true)}`;
+  if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${questionAnalysisView(false, true)}`;
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
-    ${!hasFilters ? reportStartStaté() : staté.reportMode === "estatística" ? `
+    ${!hasFilters ? reportStartState() : state.reportMode === "estatística" ? `
       <section class="kpis">
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
         ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`)}
@@ -619,19 +619,19 @@ function reportsView() {
         <button id="exportCsv">Exportar Excel/CSV</button>
       </div>
     </section>
-    <section class="card">${emptyStaté()}${tableHtml(staté.rows)}</section>`}`;
+    <section class="card">${emptyState()}${tableHtml(state.rows)}</section>`}`;
 }
 
 function reportsSubnav() {
   return `<section class="subnav">
-    <button data-report-mode="padrao" class="${staté.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
-    <button data-report-mode="estatística" class="${staté.reportMode === "estatística" ? "active" : ""}">Analise Estatistica</button>
-    <button data-report-mode="diagnostica" class="${staté.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
-    <button data-report-mode="questoes" class="${staté.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
+    <button data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
+    <button data-report-mode="estatística" class="${state.reportMode === "estatística" ? "active" : ""}">Analise Estatistica</button>
+    <button data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
+    <button data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
   </section>`;
 }
 
-function reportStartStaté() {
+function reportStartState() {
   return `<section class="card dashboard-start">
     <h3>Selecione os filtros para visualizar o relatorio</h3>
     <p class="muted">As informações dos relatorios serao apresentadas somente depois da escolha dos filtros acima, mantendo o mesmo contexto para todas as abas.</p>
@@ -697,8 +697,8 @@ function curriculoMunicipalView() {
       href: assetPath("curriculo-municipal-matématica.pdf"),
     },
   ];
-  const selected = docs.find((doc) => doc.id === staté.curriculoMunicipalDoc);
-  const selectedData = (staté.curriculoMunicipalData || []).find((doc) => doc.id === selected?.id);
+  const selected = docs.find((doc) => doc.id === state.curriculoMunicipalDoc);
+  const selectedData = (state.curriculoMunicipalData || []).find((doc) => doc.id === selected?.id);
   return `
     <section class="card bncc-header">
       <div>
@@ -742,7 +742,7 @@ function curriculoMunicipalView() {
 }
 
 function curriculoMunicipalOverview() {
-  const docs = staté.curriculoMunicipalData || [];
+  const docs = state.curriculoMunicipalData || [];
   if (!docs.length) {
     return `<section class="card">
       <h3>Consulta curricular resumida</h3>
@@ -781,7 +781,7 @@ function curriculoMunicipalTable(rows) {
 
 function habilidadesAplicadasView() {
   const draft = habilidadeDraft();
-  const errors = staté.habilidadeErrors || {};
+  const errors = state.habilidadeErrors || {};
   const questionLimit = habilidadeQuestionLimit(draft.ano);
   const incorrectAlternatives = habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta);
   return `
@@ -793,8 +793,8 @@ function habilidadesAplicadasView() {
         </div>
         <span class="badge">Limite atual: ${questionLimit || "-"} questoes</span>
       </div>
-      <form id="habilidadeForm" class="habilidade-form" novalidaté>
-        ${fieldSelect("avaliacao", "Avaliacao", draft.avaliacao, staté.habilidadeOptions.avaliacoes || [], errors.avaliacao, "Selecione a avaliacao")}
+      <form id="habilidadeForm" class="habilidade-form" novalidate>
+        ${fieldSelect("avaliacao", "Avaliacao", draft.avaliacao, state.habilidadeOptions.avaliacoes || [], errors.avaliacao, "Selecione a avaliacao")}
         ${fieldSelect("ano", "Ano", draft.ano, habilidadeYears, errors.ano, "Selecione o ano")}
         ${fieldSelect("disciplina", "Disciplina", draft.disciplina, habilidadeDisciplines, errors.disciplina, "Selecione a disciplina")}
         <label class="${errors.questao ? "field-error" : ""}">Questao
@@ -833,13 +833,13 @@ function habilidadesAplicadasView() {
     <section class="card">
       <h3>Habilidades aplicadas cadastradas</h3>
       <div class="table-wrap"><table><thead><tr><th>Avaliacao</th><th>Ano</th><th>Disciplina</th><th>Questao</th><th>Descritor</th><th>Alternativa</th><th>Criado em</th></tr></thead><tbody>
-        ${staté.habilidadesAplicadas.length ? staté.habilidadesAplicadas.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${daté(item.criadoEm)}</td></tr>`).join("") : "<tr><td colspan='7'>Nenhum cadastro realizado.</td></tr>"}
+        ${state.habilidadesAplicadas.length ? state.habilidadesAplicadas.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${date(item.criadoEm)}</td></tr>`).join("") : "<tr><td colspan='7'>Nenhum cadastro realizado.</td></tr>"}
       </tbody></table></div>
     </section>`;
 }
 
 function qualityView() {
-  const q = staté.quality;
+  const q = state.quality;
   return `
     ${filtersHtml()}
     <section class="card">
@@ -852,7 +852,7 @@ function qualityView() {
 }
 
 function compareView() {
-  const comparison = staté.comparison;
+  const comparison = state.comparison;
   return `
     ${filtersHtml()}
     <section class="card">
@@ -868,10 +868,10 @@ function importView() {
     <section class="admin-grid">
       <div class="card">
         <h3>Importar planilha Excel</h3>
-        ${staté.importStats ? `<div class="import-summary">
-          <div><strong>${staté.importStats.totalAlunos}</strong><span>Total atual da base</span></div>
-          <div><strong>${staté.importStats.acertos}</strong><span>Acertos na base</span></div>
-          <div><strong>${staté.importStats.percentualAcertos}%</strong><span>Percentual geral</span></div>
+        ${state.importStats ? `<div class="import-summary">
+          <div><strong>${state.importStats.totalAlunos}</strong><span>Total atual da base</span></div>
+          <div><strong>${state.importStats.acertos}</strong><span>Acertos na base</span></div>
+          <div><strong>${state.importStats.percentualAcertos}%</strong><span>Percentual geral</span></div>
         </div>` : ""}
         <form id="importForm" class="form-grid">
           <label>Arquivo .xlsx <input name="file" type="file" accept=".xlsx" required></label>
@@ -882,14 +882,14 @@ function importView() {
       <div class="card">
         <h3>Logs de importação</h3>
         <div class="table-wrap"><table><thead><tr><th>Arquivo</th><th>Total</th><th>Novos</th><th>Atualizados</th><th>Data</th><th>Acoes</th></tr></thead><tbody>
-          ${staté.imports.length ? staté.imports.map((i) => `<tr><td>${esc(i.nomeArquivo)}</td><td>${i.quantidadeRegistros}</td><td>${i.novosRegistros ?? i.quantidadeRegistros}</td><td>${i.registrosAtualizados ?? 0}</td><td>${daté(i.criadaEm)}</td><td><button class="danger" data-delete-import="${i.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='6'>Nenhuma importacao registrada.</td></tr>"}
+          ${state.imports.length ? state.imports.map((i) => `<tr><td>${esc(i.nomeArquivo)}</td><td>${i.quantidadeRegistros}</td><td>${i.novosRegistros ?? i.quantidadeRegistros}</td><td>${i.registrosAtualizados ?? 0}</td><td>${date(i.criadaEm)}</td><td><button class="danger" data-delete-import="${i.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='6'>Nenhuma importacao registrada.</td></tr>"}
         </tbody></table></div>
       </div>
     </section>`;
 }
 
 function adminView() {
-  const editingUser = staté.users.find((user) => user.id === staté.editingUserId);
+  const editingUser = state.users.find((user) => user.id === state.editingUserId);
   const submitLabel = editingUser ? "Salvar alteracoes" : "Cadastrar usuario";
   const passwordAttrs = editingUser ? 'placeholder="Preencha apenas se desejar alterar"' : "required";
   return `
@@ -922,15 +922,15 @@ function adminView() {
       <div class="card">
         <h3>Auditoria</h3>
         <div class="table-wrap"><table><thead><tr><th>Acao</th><th>Usuario</th><th>Data</th></tr></thead><tbody>
-          ${staté.logs.map((l) => `<tr><td>${esc(l.acao)}</td><td>${esc(l.usuarioEmail || "")}</td><td>${daté(l.criadoEm)}</td></tr>`).join("")}
+          ${state.logs.map((l) => `<tr><td>${esc(l.acao)}</td><td>${esc(l.usuarioEmail || "")}</td><td>${date(l.criadoEm)}</td></tr>`).join("")}
         </tbody></table></div>
       </div>
     </section>`;
 }
 
 function permissionsHtml() {
-  const roles = Object.keys(staté.adminPermissions?.permissions || staté.permissionsByRole || {});
-  const data = staté.adminPermissions?.permissions || {};
+  const roles = Object.keys(state.adminPermissions?.permissions || state.permissionsByRole || {});
+  const data = state.adminPermissions?.permissions || {};
   const labels = {
     dashboard: "Dashboard",
     analise: "Análise diagnóstica",
@@ -946,10 +946,10 @@ function permissionsHtml() {
     <section class="permission-card">
       <header>
         <strong>${esc(role)}</strong>
-        <span>${(staté.adminPermissions?.screens || []).filter((screen) => data[role]?.[screen] !== false).length} telas ativas</span>
+        <span>${(state.adminPermissions?.screens || []).filter((screen) => data[role]?.[screen] !== false).length} telas ativas</span>
       </header>
       <div class="permission-list">
-        ${(staté.adminPermissions?.screens || []).map((screen) => `
+        ${(state.adminPermissions?.screens || []).map((screen) => `
           <label class="permission-row">
             <input type="checkbox" data-role="${role}" data-screen="${screen}" ${data[role]?.[screen] !== false ? "checked" : ""}>
             <span>${esc(labels[screen] || screen)}</span>
@@ -960,7 +960,7 @@ function permissionsHtml() {
 
 function usersTable() {
   return `<div class="table-wrap"><table><thead><tr><th>E-mail</th><th>Perfil</th><th>Unidade</th><th>Status</th><th>Acoes</th></tr></thead><tbody>
-    ${staté.users.map((u) => `<tr>
+    ${state.users.map((u) => `<tr>
       <td>${esc(u.email)}</td><td><span class="badge">${esc(u.perfil)}</span></td><td>${esc(u.unidadeEscolar || "")}</td>
       <td class="${u.ativo ? "status-on" : "status-off"}">${u.ativo ? "Ativo" : "Inativo"}</td>
       <td class="row-actions">
@@ -972,9 +972,9 @@ function usersTable() {
 }
 
 function habilidadeDraft() {
-  staté.habilidadeDraft ||= {};
-  staté.habilidadeDraft.analiseDistratores ||= {};
-  return staté.habilidadeDraft;
+  state.habilidadeDraft ||= {};
+  state.habilidadeDraft.analiseDistratores ||= {};
+  return state.habilidadeDraft;
 }
 
 function fieldSelect(name, label, value, options, error, placeholder) {
@@ -995,7 +995,7 @@ function habilidadeQuestionLimit(year) {
   return habilidadeQuestionLimits[year] || 0;
 }
 
-function validatéHabilidadeDraft() {
+function validateHabilidadeDraft() {
   const draft = habilidadeDraft();
   const errors = {};
   const required = {
@@ -1022,7 +1022,7 @@ function validatéHabilidadeDraft() {
       }
     }
   }
-  staté.habilidadeErrors = errors;
+  state.habilidadeErrors = errors;
   return errors;
 }
 
@@ -1052,18 +1052,18 @@ function colorForLevel(level) {
   return levelColors[normalizeLevel(level)] || "#667085";
 }
 
-function emptyStaté() {
-  if (staté.loading) return `<div class="loading-box">Carregando dados relacionados aos filtros selecionados...</div>`;
-  if (!staté.rows.length && Object.keys(staté.filters).length) {
+function emptyState() {
+  if (state.loading) return `<div class="loading-box">Carregando dados relacionados aos filtros selecionados...</div>`;
+  if (!state.rows.length && Object.keys(state.filters).length) {
     return `<div class="empty-box">Nenhum resultado encontrado para os filtros selecionados.</div>`;
   }
   return "";
 }
 
 function diagnosticCards(items) {
-  const active = items[staté.activeDiagnosticIndex] || items[0];
+  const active = items[state.activeDiagnosticIndex] || items[0];
   return `<div class="diagnostic-buttons">${items.map((item, index) => `
-    <button data-diagnostic-index="${index}" class="${index === staté.activeDiagnosticIndex ? "active" : ""}">
+    <button data-diagnostic-index="${index}" class="${index === state.activeDiagnosticIndex ? "active" : ""}">
       <span class="badge">${esc(item.tipo)}</span>
       <strong>${esc(item.titulo)}</strong>
     </button>`).join("")}</div>
@@ -1089,46 +1089,46 @@ function bind() {
   document.querySelector("#logout")?.addEventListener("click", logout);
   document.querySelector("#backPage")?.addEventListener("click", goBack);
   document.querySelectorAll("[data-report-mode]").forEach((button) => button.addEventListener("click", async () => {
-    staté.reportMode = button.dataset.reportMode;
+    state.reportMode = button.dataset.reportMode;
     await loadCurrent();
   }));
   document.querySelectorAll("[data-diagnostic-index]").forEach((button) => button.addEventListener("click", () => {
-    staté.activeDiagnosticIndex = Number(button.dataset.diagnosticIndex || 0);
+    state.activeDiagnosticIndex = Number(button.dataset.diagnosticIndex || 0);
     render();
   }));
   document.querySelectorAll("[data-answer-info]").forEach((button) => button.addEventListener("click", () => {
-    staté.questionAnswerSelection ||= {};
+    state.questionAnswerSelection ||= {};
     const id = button.dataset.answerInfo;
     const alternative = button.dataset.answerAlternative;
-    staté.questionAnswerSelection[id] = staté.questionAnswerSelection[id] === alternative ? "" : alternative;
+    state.questionAnswerSelection[id] = state.questionAnswerSelection[id] === alternative ? "" : alternative;
     render();
   }));
   document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", async () => {
-    if (staté.view !== button.dataset.view) {
-      staté.viewHistory.push(staté.view);
+    if (state.view !== button.dataset.view) {
+      state.viewHistory.push(state.view);
     }
-    staté.view = button.dataset.view;
+    state.view = button.dataset.view;
     await loadCurrent();
   }));
   document.querySelectorAll("[data-filter]").forEach((select) => select.addEventListener("change", handleFilterChange));
   document.querySelectorAll("[data-question-filter]").forEach((select) => select.addEventListener("change", handleQuestionFilterChange));
   document.querySelector("#clearFilters")?.addEventListener("click", async () => {
-    staté.filters = {};
-    staté.loading = true;
+    state.filters = {};
+    state.loading = true;
     render();
     await loadCurrent();
   });
   document.querySelector("#clearQuestionFilters")?.addEventListener("click", async () => {
-    for (const key of questionAnalysisFilterOrder) delete staté.filters[key];
-    staté.showQuestionImmersion = false;
-    staté.loading = true;
+    for (const key of questionAnalysisFilterOrder) delete state.filters[key];
+    state.showQuestionImmersion = false;
+    state.loading = true;
     render();
     await loadCurrent();
   });
   document.querySelector("#pdfReport")?.addEventListener("click", () => download(`/reports/pdf?${query()}`, "relatorio-avd.pdf"));
   document.querySelector("#questionAnalysisPdf")?.addEventListener("click", () => download(`/analysis/questions/pdf?${query()}`, "relatorio-analise-diagnostica-questoes.pdf"));
   document.querySelector("#questionImmersion")?.addEventListener("click", () => {
-    staté.showQuestionImmersion = !staté.showQuestionImmersion;
+    state.showQuestionImmersion = !state.showQuestionImmersion;
     render();
   });
   document.querySelector("#printImmersion")?.addEventListener("click", () => {
@@ -1142,7 +1142,7 @@ function bind() {
   document.querySelector("#printPage")?.addEventListener("click", () => window.print());
   document.querySelector("#userForm")?.addEventListener("submit", saveUser);
   document.querySelector("#cancelUserEdit")?.addEventListener("click", () => {
-    staté.editingUserId = "";
+    state.editingUserId = "";
     render();
   });
   document.querySelectorAll("[data-edit-user]").forEach((button) => button.addEventListener("click", () => editUser(button.dataset.editUser)));
@@ -1152,8 +1152,8 @@ function bind() {
   document.querySelectorAll("[data-delete-import]").forEach((button) => button.addEventListener("click", () => deleteImport(button.dataset.deleteImport)));
   document.querySelector("#habilidadeForm")?.addEventListener("submit", saveHabilidadeAplicada);
   document.querySelector("#resetHabilidadeForm")?.addEventListener("click", () => {
-    staté.habilidadeDraft = {};
-    staté.habilidadeErrors = {};
+    state.habilidadeDraft = {};
+    state.habilidadeErrors = {};
     render();
   });
   document.querySelectorAll("[data-habilidade-field]").forEach((field) => field.addEventListener("input", handleHabilidadeField));
@@ -1171,20 +1171,20 @@ function handleHabilidadeField(event) {
   if (field === "alternativaCorreta") {
     delete draft.analiseDistratores[draft.alternativaCorreta];
   }
-  validatéHabilidadeDraft();
+  validateHabilidadeDraft();
   if (["ano", "alternativaCorreta"].includes(field)) render();
-  else updatéHabilidadeFieldStaté(field);
+  else updateHabilidadeFieldState(field);
 }
 
 function handleDistractorField(event) {
   const draft = habilidadeDraft();
   draft.analiseDistratores[event.target.dataset.distractor] = event.target.value;
-  validatéHabilidadeDraft();
-  updatéHabilidadeFieldStaté(`distrator_${event.target.dataset.distractor}`);
+  validateHabilidadeDraft();
+  updateHabilidadeFieldState(`distrator_${event.target.dataset.distractor}`);
 }
 
-function updatéHabilidadeFieldStaté(field) {
-  const error = staté.habilidadeErrors[field];
+function updateHabilidadeFieldState(field) {
+  const error = state.habilidadeErrors[field];
   const selector = field.startsWith("distrator_")
     ? `[data-distractor="${field.replace("distrator_", "")}"]`
     : `[data-habilidade-field="${field}"]`;
@@ -1194,7 +1194,7 @@ function updatéHabilidadeFieldStaté(field) {
   label.classList.toggle("field-error", Boolean(error));
   let help = label.querySelector(".field-help");
   if (!help && error) {
-    help = document.creatéElement("span");
+    help = document.createElement("span");
     help.className = "field-help";
     label.appendChild(help);
   }
@@ -1209,10 +1209,10 @@ async function handleFilterChange(event) {
   const value = key === "avaliacao"
     ? [...event.target.selectedOptions].map((option) => option.value).filter(Boolean)
     : event.target.value;
-  if (Array.isArray(value) ? value.length : value) staté.filters[key] = value;
-  else delete staté.filters[key];
+  if (Array.isArray(value) ? value.length : value) state.filters[key] = value;
+  else delete state.filters[key];
   clearChildFilters(key);
-  staté.loading = true;
+  state.loading = true;
   render();
   await loadCurrent();
 }
@@ -1222,10 +1222,10 @@ async function handleQuestionFilterChange(event) {
   const value = key === "avaliacao"
     ? [...event.target.selectedOptions].map((option) => option.value).filter(Boolean)
     : event.target.value;
-  if (Array.isArray(value) ? value.length : value) staté.filters[key] = value;
-  else delete staté.filters[key];
+  if (Array.isArray(value) ? value.length : value) state.filters[key] = value;
+  else delete state.filters[key];
   clearQuestionChildFilters(key);
-  staté.loading = true;
+  state.loading = true;
   render();
   await loadCurrent();
 }
@@ -1233,51 +1233,51 @@ async function handleQuestionFilterChange(event) {
 function clearQuestionChildFilters(parentKey) {
   const index = questionAnalysisFilterOrder.indexOf(parentKey);
   if (index < 0) return;
-  for (const child of questionAnalysisFilterOrder.slice(index + 1)) delete staté.filters[child];
+  for (const child of questionAnalysisFilterOrder.slice(index + 1)) delete state.filters[child];
 }
 
 function clearChildFilters(parentKey) {
   const index = filterOrder.indexOf(parentKey);
   if (index < 0) return;
-  for (const child of filterOrder.slice(index + 1)) delete staté.filters[child];
+  for (const child of filterOrder.slice(index + 1)) delete state.filters[child];
 }
 
 function applyOptionsPayload(payload) {
-  staté.options = payload.options || payload || {};
-  staté.optionTotal = payload.total || 0;
+  state.options = payload.options || payload || {};
+  state.optionTotal = payload.total || 0;
   removeInvalidSelections();
 }
 
 function removeInvalidSelections() {
   let changedAt = -1;
   for (const key of filterOrder) {
-    const allowed = staté.options[key] || [];
-    if (Array.isArray(staté.filters[key])) {
-      const kept = staté.filters[key].filter((value) => allowed.includes(value));
-      if (kept.length !== staté.filters[key].length) {
-        if (kept.length) staté.filters[key] = kept;
-        else delete staté.filters[key];
+    const allowed = state.options[key] || [];
+    if (Array.isArray(state.filters[key])) {
+      const kept = state.filters[key].filter((value) => allowed.includes(value));
+      if (kept.length !== state.filters[key].length) {
+        if (kept.length) state.filters[key] = kept;
+        else delete state.filters[key];
         changedAt = filterOrder.indexOf(key);
         break;
       }
-    } else if (staté.filters[key] && !allowed.includes(staté.filters[key])) {
+    } else if (state.filters[key] && !allowed.includes(state.filters[key])) {
       changedAt = filterOrder.indexOf(key);
-      delete staté.filters[key];
+      delete state.filters[key];
       break;
     }
   }
   if (changedAt >= 0) {
-    for (const child of filterOrder.slice(changedAt + 1)) delete staté.filters[child];
+    for (const child of filterOrder.slice(changedAt + 1)) delete state.filters[child];
   }
 }
 
 async function goBack() {
-  staté.view = "dashboard";
-  staté.viewHistory = [];
-  staté.filters = {};
-  staté.reportMode = "padrao";
-  staté.showQuestionImmersion = false;
-  staté.activeDiagnosticIndex = 0;
+  state.view = "dashboard";
+  state.viewHistory = [];
+  state.filters = {};
+  state.reportMode = "padrao";
+  state.showQuestionImmersion = false;
+  state.activeDiagnosticIndex = 0;
   await loadCurrent();
 }
 
@@ -1286,21 +1286,21 @@ async function login(event) {
   const data = Object.fromEntries(new FormData(event.target));
   try {
     const result = await api("/auth/login", { method: "POST", body: data, auth: false });
-    staté.token = result.token;
-    staté.refreshToken = result.refreshToken;
-    staté.user = result.user;
-    staté.permissions = result.permissions;
-    localStorage.setItem("token", staté.token);
-    localStorage.setItem("refreshToken", staté.refreshToken);
+    state.token = result.token;
+    state.refreshToken = result.refreshToken;
+    state.user = result.user;
+    state.permissions = result.permissions;
+    localStorage.setItem("token", state.token);
+    localStorage.setItem("refreshToken", state.refreshToken);
     await loadDashboard();
   } catch (error) {
-    staté.error = error.message;
+    state.error = error.message;
   }
   render();
 }
 
 async function logout() {
-  try { await api("/auth/logout", { method: "POST", body: { refreshToken: staté.refreshToken } }); } catch {}
+  try { await api("/auth/logout", { method: "POST", body: { refreshToken: state.refreshToken } }); } catch {}
   logoutLocal();
   render();
 }
@@ -1308,34 +1308,34 @@ async function logout() {
 function logoutLocal() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
-  Object.assign(staté, { token: null, refreshToken: null, user: null, dashboard: null, rows: [], filters: {}, options: {} });
+  Object.assign(state, { token: null, refreshToken: null, user: null, dashboard: null, rows: [], filters: {}, options: {} });
 }
 
 async function loadCurrent() {
   try {
-    if (staté.view === "admin") await loadAdmin();
-    else if (staté.view === "importacoes") await loadImports();
-    else if (staté.view === "qualidade") await loadQuality();
-    else if (staté.view === "analise") await loadAnalysis();
-    else if (staté.view === "analiseQuestoes") await loadQuestionAnalysis();
-    else if (staté.view === "relatorios") await loadReports();
-    else if (staté.view === "comparativo") await loadCompare();
-    else if (staté.view === "habilidadesAplicadas") await loadHabilidadesAplicadas();
-    else if (staté.view === "curriculoMunicipal") await loadCurriculoMunicipal();
+    if (state.view === "admin") await loadAdmin();
+    else if (state.view === "importacoes") await loadImports();
+    else if (state.view === "qualidade") await loadQuality();
+    else if (state.view === "analise") await loadAnalysis();
+    else if (state.view === "analiseQuestoes") await loadQuestionAnalysis();
+    else if (state.view === "relatorios") await loadReports();
+    else if (state.view === "comparativo") await loadCompare();
+    else if (state.view === "habilidadesAplicadas") await loadHabilidadesAplicadas();
+    else if (state.view === "curriculoMunicipal") await loadCurriculoMunicipal();
     else await loadDashboard();
   } catch (error) {
-    staté.error = error.message;
+    state.error = error.message;
   } finally {
-    staté.loading = false;
+    state.loading = false;
     render();
   }
 }
 
 async function loadCurriculoMunicipal() {
-  if (!staté.curriculoMunicipalData) {
+  if (!state.curriculoMunicipalData) {
     const response = await fetch(assetPath("curriculo-municipal-data.json"));
     if (!response.ok) throw new Error("Falha ao carregar o Currículo Municipal.");
-    staté.curriculoMunicipalData = await response.json();
+    state.curriculoMunicipalData = await response.json();
   }
 }
 
@@ -1344,28 +1344,28 @@ async function loadReports() {
   const optionsPayload = await api(`/options?${qs}`);
   applyOptionsPayload(optionsPayload);
   if (!hasReportFilters()) {
-    staté.rows = [];
-    staté.statistics = null;
-    staté.analysis = null;
-    staté.questionAnalysis = null;
+    state.rows = [];
+    state.statistics = null;
+    state.analysis = null;
+    state.questionAnalysis = null;
     return;
   }
-  if (staté.reportMode === "diagnostica") {
+  if (state.reportMode === "diagnostica") {
     const [analysisPayload, dashboardPayload] = await Promise.all([
       api(`/analysis?${qs}`),
       api(`/dashboard?${qs}`),
     ]);
-    staté.analysis = analysisPayload;
-    staté.dashboard = dashboardPayload;
+    state.analysis = analysisPayload;
+    state.dashboard = dashboardPayload;
     return;
   }
-  if (staté.reportMode === "questoes") {
-    staté.questionAnalysis = await api(`/analysis/questions?${qs}`);
+  if (state.reportMode === "questoes") {
+    state.questionAnalysis = await api(`/analysis/questions?${qs}`);
     return;
   }
   const recordsPayload = await api(`/records?limit=500&${qs}`);
-  staté.rows = recordsPayload.rows;
-  if (staté.reportMode === "estatística") staté.statistics = await api(`/statistics?${qs}`);
+  state.rows = recordsPayload.rows;
+  if (state.reportMode === "estatística") state.statistics = await api(`/statistics?${qs}`);
 }
 
 async function loadCompare() {
@@ -1376,8 +1376,8 @@ async function loadCompare() {
     api(`/dashboard?${qs}`),
   ]);
   applyOptionsPayload(optionsPayload);
-  staté.comparison = comparisonPayload;
-  staté.dashboard = dashboardPayload;
+  state.comparison = comparisonPayload;
+  state.dashboard = dashboardPayload;
 }
 
 async function loadDashboard() {
@@ -1388,8 +1388,8 @@ async function loadDashboard() {
     api(`/records?limit=500&${qs}`),
   ]);
   applyOptionsPayload(optionsPayload);
-  staté.dashboard = dashboardPayload;
-  staté.rows = recordsPayload.rows;
+  state.dashboard = dashboardPayload;
+  state.rows = recordsPayload.rows;
 }
 
 async function loadQuality() {
@@ -1399,7 +1399,7 @@ async function loadQuality() {
     api(`/quality?${qs}`),
   ]);
   applyOptionsPayload(optionsPayload);
-  staté.quality = qualityPayload;
+  state.quality = qualityPayload;
 }
 
 async function loadAnalysis() {
@@ -1410,13 +1410,13 @@ async function loadAnalysis() {
     api(`/dashboard?${qs}`),
   ]);
   applyOptionsPayload(optionsPayload);
-  staté.analysis = analysisPayload;
-  staté.dashboard = dashboardPayload;
+  state.analysis = analysisPayload;
+  state.dashboard = dashboardPayload;
 }
 
 async function loadQuestionAnalysis() {
   const qs = query();
-  staté.questionAnalysis = await api(`/analysis/questions?${qs}`);
+  state.questionAnalysis = await api(`/analysis/questions?${qs}`);
 }
 
 async function loadImports() {
@@ -1424,26 +1424,26 @@ async function loadImports() {
     api("/imports"),
     api("/dashboard"),
   ]);
-  staté.imports = importsPayload;
-  staté.importStats = dashboardPayload.kpis;
+  state.imports = importsPayload;
+  state.importStats = dashboardPayload.kpis;
 }
 
 async function deleteImport(id) {
-  const item = staté.imports.find((entry) => entry.id === id);
+  const item = state.imports.find((entry) => entry.id === id);
   const ok = confirm(`Excluir a importacao "${item?.nomeArquivo || id}"?\n\nOs registros vinculados a essa importacao serao removidos da base e os totais serao recalculados.`);
   if (!ok) return;
   const result = await api(`/imports/${id}`, { method: "DELETE" });
-  staté.message = `Importação excluída. Registros removidos: ${result.registrosRemovidos}.`;
-  staté.filters = {};
+  state.message = `Importação excluída. Registros removidos: ${result.registrosRemovidos}.`;
+  state.filters = {};
   await loadImports();
-  if (result?.kpis) staté.importStats = result.kpis;
+  if (result?.kpis) state.importStats = result.kpis;
   render();
 }
 
 async function loadAdmin() {
-  staté.users = await api("/admin/users");
-  staté.adminPermissions = await api("/admin/permissions");
-  staté.logs = await api("/logs");
+  state.users = await api("/admin/users");
+  state.adminPermissions = await api("/admin/permissions");
+  state.logs = await api("/logs");
 }
 
 async function loadHabilidadesAplicadas() {
@@ -1451,15 +1451,15 @@ async function loadHabilidadesAplicadas() {
     api("/habilidades-aplicadas/options"),
     api("/habilidades-aplicadas"),
   ]);
-  staté.habilidadeOptions = options;
-  staté.habilidadesAplicadas = items;
+  state.habilidadeOptions = options;
+  state.habilidadesAplicadas = items;
 }
 
 async function saveHabilidadeAplicada(event) {
   event.preventDefault();
-  const errors = validatéHabilidadeDraft();
+  const errors = validateHabilidadeDraft();
   if (Object.keys(errors).length) {
-    staté.error = "Revise os campos destacados antes de salvar.";
+    state.error = "Revise os campos destacados antes de salvar.";
     render();
     return;
   }
@@ -1480,20 +1480,20 @@ async function saveHabilidadeAplicada(event) {
   };
   try {
     await api("/habilidades-aplicadas", { method: "POST", body });
-    staté.message = "Habilidade aplicada cadastrada com sucesso.";
-    staté.error = "";
-    staté.habilidadeDraft = {};
-    staté.habilidadeErrors = {};
+    state.message = "Habilidade aplicada cadastrada com sucesso.";
+    state.error = "";
+    state.habilidadeDraft = {};
+    state.habilidadeErrors = {};
     await loadHabilidadesAplicadas();
   } catch (error) {
-    staté.error = error.message;
+    state.error = error.message;
   }
   render();
 }
 
 function editUser(id) {
-  staté.editingUserId = id;
-  staté.message = "Edicao de usuario carregada no formulario.";
+  state.editingUserId = id;
+  state.message = "Edicao de usuario carregada no formulario.";
   render();
   document.querySelector("#userForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -1503,32 +1503,32 @@ async function saveUser(event) {
   const body = Object.fromEntries(new FormData(event.target));
   body.ativo = body.ativo === "true";
   if (!body.senha) delete body.senha;
-  if (staté.editingUserId) {
-    await api(`/admin/users/${staté.editingUserId}`, { method: "PUT", body });
-    staté.message = "Usuario atualizado.";
-    staté.editingUserId = "";
+  if (state.editingUserId) {
+    await api(`/admin/users/${state.editingUserId}`, { method: "PUT", body });
+    state.message = "Usuario atualizado.";
+    state.editingUserId = "";
   } else {
     await api("/admin/users", { method: "POST", body });
-    staté.message = "Usuario cadastrado.";
+    state.message = "Usuario cadastrado.";
   }
   await loadAdmin();
   render();
 }
 
 async function toggleUser(id) {
-  const user = staté.users.find((u) => u.id === id);
+  const user = state.users.find((u) => u.id === id);
   await api(`/admin/users/${id}`, { method: "PUT", body: { ativo: !user.ativo } });
   await loadAdmin();
   render();
 }
 
 async function savePermissions() {
-  const permissions = structuredClone(staté.adminPermissions.permissions);
+  const permissions = structuredClone(state.adminPermissions.permissions);
   document.querySelectorAll("[data-role][data-screen]").forEach((box) => {
     permissions[box.dataset.role][box.dataset.screen] = box.checked;
   });
   await api("/admin/permissions", { method: "PUT", body: { permissions } });
-  staté.message = "Permissoes atualizadas.";
+  state.message = "Permissoes atualizadas.";
   await loadAdmin();
   render();
 }
@@ -1593,11 +1593,11 @@ function renderImportPreview(result, activeTab) {
     try {
       const committed = await api("/imports/commit", { method: "POST", body: { previewId: result.previewId, force: false } });
       stopProgress(100);
-      staté.message = "IMPORTAÇÃO DE DADOS EFETIVADA";
-      staté.filters = {};
+      state.message = "IMPORTAÇÃO DE DADOS EFETIVADA";
+      state.filters = {};
       await loadImports();
-      if (committed?.kpis) staté.importStats = committed.kpis;
-      staté.view = "importacoes";
+      if (committed?.kpis) state.importStats = committed.kpis;
+      state.view = "importacoes";
       setTimeout(() => render(), 250);
     } catch (error) {
       stopProgress(0);
@@ -1629,15 +1629,15 @@ function startImportProgress(message) {
   let progress = 0;
   const timer = setInterval(() => {
     progress = Math.min(progress + Math.max(2, Math.round((95 - progress) * 0.12)), 95);
-    updatéImportProgress(progress);
+    updateImportProgress(progress);
   }, 240);
   return (finalValue) => {
     clearInterval(timer);
-    updatéImportProgress(finalValue);
+    updateImportProgress(finalValue);
   };
 }
 
-function updatéImportProgress(value) {
+function updateImportProgress(value) {
   const bar = document.querySelector("#importProgressBar");
   const text = document.querySelector("#importProgressValue");
   if (bar && text) {
@@ -1684,14 +1684,14 @@ async function changePassword() {
   const newPassword = prompt("Nova senha");
   if (!currentPassword || !newPassword) return;
   await api("/auth/change-password", { method: "POST", body: { currentPassword, newPassword } });
-  staté.message = "Senha alterada.";
+  state.message = "Senha alterada.";
   render();
 }
 
 async function api(url, options = {}) {
   if (!window.AVD_DB_REQUEST) throw new Error("Camada Supabase nao carregada. Confira supabase-init.js.");
   try {
-    return await window.AVD_DB_REQUEST(options.method || "GET", url, options.body || options.form, { token: staté.token, auth: options.auth !== false });
+    return await window.AVD_DB_REQUEST(options.method || "GET", url, options.body || options.form, { token: state.token, auth: options.auth !== false });
   } catch (error) {
     throw new Error(error?.error || error?.message || "Falha na requisicao.");
   }
@@ -1702,18 +1702,18 @@ function assetPath(fileName) {
 }
 
 function drawCharts() {
-  if (!staté.dashboard) return;
-  drawBars("levelChart", staté.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
-  drawBars("unitChart", staté.dashboard.rankingUnidades.slice(0, 8), "percentual", { suffix: "%", color: "#0057d9" });
-  drawBars("questionChart", staté.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
-  drawDonut("donutChart", staté.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
-  drawBars("compareChart", staté.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
-  if (staté.statistics) {
-    drawBars("statsLevelChart", staté.statistics.distribuicaoNivel, "value", { suffix: " alunos", levelPalette: true });
-    drawBars("statsQuestionChart", staté.statistics.questoes, "percentual", { suffix: "%", color: "#b54708", compact: true });
+  if (!state.dashboard) return;
+  drawBars("levelChart", state.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
+  drawBars("unitChart", state.dashboard.rankingUnidades.slice(0, 8), "percentual", { suffix: "%", color: "#0057d9" });
+  drawBars("questionChart", state.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
+  drawDonut("donutChart", state.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
+  drawBars("compareChart", state.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
+  if (state.statistics) {
+    drawBars("statsLevelChart", state.statistics.distribuicaoNivel, "value", { suffix: " alunos", levelPalette: true });
+    drawBars("statsQuestionChart", state.statistics.questoes, "percentual", { suffix: "%", color: "#b54708", compact: true });
   }
-  if (staté.questionAnalysis) {
-    drawBars("questionDiagnosticChart", consolidatédQuestionRows(staté.questionAnalysis.rows || []).map((row) => ({ ...row, label: row.questao })), "percentual", { suffix: "%", color: "#b54708", compact: true });
+  if (state.questionAnalysis) {
+    drawBars("questionDiagnosticChart", consolidatedQuestionRows(state.questionAnalysis.rows || []).map((row) => ({ ...row, label: row.questao })), "percentual", { suffix: "%", color: "#b54708", compact: true });
   }
 }
 
@@ -1725,7 +1725,7 @@ function drawBars(id, data, key, options = {}) {
     const cssW = canvas.clientWidth || 640;
     const cssH = 300;
     if (!data.length) {
-      updatéChartRegistry(id, { bars: [] });
+      updateChartRegistry(id, { bars: [] });
       return drawNoData(ctx, cssW, cssH);
     }
     const max = Math.max(...data.map((d) => Number(d[key] || 0)), 1);
@@ -1795,7 +1795,7 @@ function drawBars(id, data, key, options = {}) {
       ? data.slice(0, 6).map((item) => ({ label: item.label, color: colorForLevel(item.label) }))
       : [{ label: options.suffix === "%" ? "Percentual de acertos" : "Quantidade de alunos", color: options.color || "#0038a8" }];
     drawLegend(ctx, legendItems, cssW, cssH);
-    updatéChartRegistry(id, { bars });
+    updateChartRegistry(id, { bars });
   };
   const hoverIndex = chartRegistry.get(id)?.hoverIndex ?? -1;
   render(hoverIndex);
@@ -1814,7 +1814,7 @@ function drawDonut(id, data, options = {}) {
     const cssW = canvas.clientWidth || 640;
     const cssH = 300;
     if (!data.length) {
-      updatéChartRegistry(id, { slices: [] });
+      updateChartRegistry(id, { slices: [] });
       return drawNoData(ctx, cssW, cssH);
     }
     const total = data.reduce((sum, d) => sum + d.value, 0) || 1;
@@ -1876,7 +1876,7 @@ function drawDonut(id, data, options = {}) {
       ctx.fillText(`${d.value} alunos | ${d.percent}%`, cssW * 0.64 + 24, y + 16);
       if (active) drawTooltip(ctx, `${d.label}: ${d.value} alunos | ${d.percent}%`, cssW, cx, cy - r - 12);
     });
-    updatéChartRegistry(id, { slices });
+    updateChartRegistry(id, { slices });
   };
   const hoverIndex = chartRegistry.get(id)?.hoverIndex ?? -1;
   render(hoverIndex);
@@ -1895,13 +1895,13 @@ function drawDonut(id, data, options = {}) {
   });
 }
 
-function updatéChartRegistry(id, values) {
+function updateChartRegistry(id, values) {
   chartRegistry.set(id, { ...(chartRegistry.get(id) || {}), ...values });
 }
 
 function bindChartHover(canvas, render, hitTest) {
   const id = canvas.id;
-  updatéChartRegistry(id, { render, hitTest });
+  updateChartRegistry(id, { render, hitTest });
   if (canvas.dataset.hoverBound) return;
   canvas.dataset.hoverBound = "1";
   canvas.addEventListener("mousemove", (event) => {
@@ -2000,12 +2000,12 @@ async function download(url, filename) {
     const result = await api(url);
     blob = result instanceof Blob ? result : new Blob([String(result ?? "")]);
   } catch {
-    staté.error = "Não foi possível gerar o arquivo.";
+    state.error = "Não foi possível gerar o arquivo.";
     render();
     return;
   }
-  const objectUrl = URL.creatéObjectURL(blob);
-  const a = document.creatéElement("a");
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
   a.href = objectUrl;
   a.download = filename;
   a.click();
@@ -2014,7 +2014,7 @@ async function download(url, filename) {
 
 function query() {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(staté.filters)) {
+  for (const [key, value] of Object.entries(state.filters)) {
     if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
     else if (value) params.set(key, value);
   }
@@ -2022,7 +2022,7 @@ function query() {
 }
 
 function isSelectedFilter(key, value) {
-  return Array.isArray(staté.filters[key]) ? staté.filters[key].includes(value) : staté.filters[key] === value;
+  return Array.isArray(state.filters[key]) ? state.filters[key].includes(value) : state.filters[key] === value;
 }
 
 function comparisonTable(comparison) {
@@ -2041,9 +2041,9 @@ function kpi(label, value) {
 }
 
 function alertHtml() {
-  const html = `${staté.message ? `<div class="notice">${staté.message}</div>` : ""}${staté.error ? `<div class="notice error">${staté.error}</div>` : ""}`;
-  staté.message = "";
-  staté.error = "";
+  const html = `${state.message ? `<div class="notice">${state.message}</div>` : ""}${state.error ? `<div class="notice error">${state.error}</div>` : ""}`;
+  state.message = "";
+  state.error = "";
   return html;
 }
 
@@ -2055,7 +2055,7 @@ function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]);
 }
 
-function daté(value) {
-  return value ? new Daté(value).toLocaleString("pt-BR") : "";
+function date(value) {
+  return value ? new Date(value).toLocaleString("pt-BR") : "";
 }
 

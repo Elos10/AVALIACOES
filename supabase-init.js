@@ -43,6 +43,7 @@ function seed() {
     ],
     permissions,
     records: [],
+    importPreviews: [],
     habilidadesAplicadas: [],
     imports: [],
     logs: [],
@@ -331,6 +332,189 @@ function quality(records) {
   return { total: records.length, duplicates: 0, emptyByField: Object.fromEntries(fields.map((field) => [field, records.filter((row) => !row[field]).length])) };
 }
 
+function normalizeHeader(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+}
+
+function canonicalHeader(header) {
+  const normalized = normalizeHeader(header);
+  const aliases = {
+    AVALIACAO: 'AVALIACAO',
+    'AVALIACAO DIAGNOSTICA': 'AVALIACAO',
+    UNIDADE: 'UNIDADE',
+    'UNIDADE ESCOLAR': 'UNIDADE',
+    ESCOLA: 'UNIDADE',
+    ANO: 'ANO',
+    TURMA: 'TURMA',
+    DISCIPLINA: 'DISCIPLINA',
+    ALUNO: 'NOME',
+    NOME: 'NOME',
+    'NOME DO ALUNO': 'NOME',
+    NIVEL: 'NIVEL',
+    RACA: 'RAÇA',
+    EMAIL: 'EMAIL',
+    INCLUSAO: 'INCLUSÃO',
+    PONTOS: 'PONTOS',
+    'PONTOS POSSIVEIS': 'PONTOS POSSIVEIS',
+    '% ACERTOS': '% ACERTOS',
+    PERCENTUAL: '% ACERTOS',
+    'PERCENTUAL DE ACERTOS': '% ACERTOS',
+  };
+  if (/^Q\d{1,2}$/.test(normalized)) return normalized;
+  if (/^PT[_ ]?Q\d{1,2}$/.test(normalized)) return normalized.replace(' ', '_').replace(/^PTQ/, 'PT_Q');
+  return aliases[normalized] || normalized;
+}
+
+function trimAfterRaca(headers) {
+  const index = headers.findIndex((header) => normalizeHeader(header) === 'RACA');
+  if (index < 0) return { kept: headers, ignored: [] };
+  return { kept: headers.slice(0, index + 1), ignored: headers.slice(index + 1) };
+}
+
+async function readExcelFile(file) {
+  if (!file) throw { status: 400, error: 'Selecione uma planilha Excel.' };
+  let XLSX;
+  try {
+    XLSX = await import('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm');
+  } catch {
+    throw { status: 503, error: 'Não foi possível carregar o leitor de Excel. Verifique a conexão com a internet e tente novamente.' };
+  }
+  const buffer = await file.arrayBuffer();
+  const workbook = XLSX.read(buffer, { type: 'array' });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  if (!sheet) throw { status: 400, error: 'A planilha não possui abas para leitura.' };
+  const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  const originalHeaders = (matrix[0] || []).map((header) => String(header || '').trim());
+  const { kept, ignored } = trimAfterRaca(originalHeaders);
+  const headers = kept.map(canonicalHeader);
+  const rows = matrix.slice(1)
+    .map((line) => Object.fromEntries(headers.map((header, index) => [header, normalizeCell(line[index])])))
+    .filter((row) => Object.values(row).some((value) => String(value || '').trim() !== ''))
+    .map(normalizeRecord);
+  return { originalHeaders: kept, headers, rows, ignoredColumnsAfterRaca: ignored };
+}
+
+function normalizeCell(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'number') return Number.isInteger(value) ? value : Number(value.toFixed(4));
+  return String(value).trim();
+}
+
+function normalizeRecord(row) {
+  const record = { ...row };
+  for (const key of Object.keys(record)) {
+    if (/^Q\d{1,2}$/.test(key)) record[key] = String(record[key] || '').trim().toUpperCase();
+    if (/^PT_Q\d{1,2}$/.test(key)) record[key] = Number(String(record[key] || '0').replace(',', '.')) || 0;
+  }
+  if (!record.PONTOS) record.PONTOS = Array.from({ length: 20 }, (_, index) => Number(record[`PT_Q${index + 1}`] || 0)).reduce((a, b) => a + b, 0);
+  record.PONTOS = Number(String(record.PONTOS || '0').replace(',', '.')) || 0;
+  record['PONTOS POSSIVEIS'] = Number(String(record['PONTOS POSSIVEIS'] || '0').replace(',', '.')) || Math.max(...Array.from({ length: 20 }, (_, index) => record[`Q${index + 1}`] ? index + 1 : 0), 0);
+  const possible = Number(record['PONTOS POSSIVEIS'] || 0);
+  if (!record['% ACERTOS']) record['% ACERTOS'] = possible ? record.PONTOS / possible : 0;
+  return record;
+}
+
+function validateImportRows(rows, headers) {
+  const required = ['AVALIACAO', 'UNIDADE', 'ANO', 'TURMA', 'DISCIPLINA', 'NOME', 'EMAIL'];
+  const schemaWarnings = [];
+  const validationErrors = [];
+  for (const field of required) {
+    if (!headers.includes(field)) {
+      schemaWarnings.push({ severity: 'erro', category: 'Coluna obrigatória', row: '-', column: field, message: `Coluna obrigatória ausente: ${field}.` });
+    }
+  }
+  const known = new Set([...required, 'NIVEL', 'RAÇA', 'INCLUSÃO', 'PONTOS', 'PONTOS POSSIVEIS', '% ACERTOS', ...Array.from({ length: 20 }, (_, index) => `Q${index + 1}`), ...Array.from({ length: 20 }, (_, index) => `PT_Q${index + 1}`)]);
+  for (const header of headers) {
+    if (!known.has(header)) schemaWarnings.push({ severity: 'alerta', category: 'Configuração diferente', row: '-', column: header, message: `Campo fora do padrão reconhecido: ${header}. Ele será preservado no registro.` });
+  }
+  rows.slice(0, 200).forEach((row, index) => {
+    for (const field of required) {
+      if (!row[field]) validationErrors.push({ severity: 'erro', category: 'Campo vazio', row: index + 2, column: field, message: `Linha ${index + 2}: campo obrigatório vazio.` });
+    }
+  });
+  return { schemaWarnings, validationErrors };
+}
+
+function duplicateKey(row) {
+  return ['NOME', 'AVALIACAO', 'TURMA', 'UNIDADE', 'DISCIPLINA'].map((field) => normalizeEmail(row[field])).join('|');
+}
+
+async function previewImport(db, user, form) {
+  const file = form?.get?.('file');
+  const parsed = await readExcelFile(file);
+  const checks = validateImportRows(parsed.rows, parsed.headers);
+  const existing = new Set((db.records || []).map(duplicateKey));
+  const seen = new Set();
+  let duplicates = 0;
+  for (const row of parsed.rows) {
+    const key = duplicateKey(row);
+    if (seen.has(key) || existing.has(key)) duplicates += 1;
+    seen.add(key);
+  }
+  const previewId = id('prev_');
+  db.importPreviews = (db.importPreviews || []).filter((item) => item.usuarioEmail !== user.email).slice(0, 10);
+  db.importPreviews.unshift({
+    id: previewId,
+    usuarioEmail: user.email,
+    nomeArquivo: file?.name || 'planilha.xlsx',
+    headers: parsed.headers,
+    rows: parsed.rows,
+    criadaEm: new Date().toISOString(),
+  });
+  await writeDb(db);
+  return {
+    previewId,
+    fileName: file?.name || 'planilha.xlsx',
+    headers: parsed.headers,
+    totalRows: parsed.rows.length,
+    sample: parsed.rows.slice(0, 20),
+    duplicates,
+    ignoredColumnsAfterRaca: parsed.ignoredColumnsAfterRaca,
+    schemaWarnings: checks.schemaWarnings,
+    validationErrors: checks.validationErrors,
+  };
+}
+
+async function commitImport(db, user, previewId) {
+  const preview = (db.importPreviews || []).find((item) => item.id === previewId && item.usuarioEmail === user.email);
+  if (!preview) throw { status: 404, error: 'Conferência não encontrada. Confira a planilha novamente.' };
+  const importId = id('imp_');
+  const existingByKey = new Map((db.records || []).map((row) => [duplicateKey(row), row]));
+  let novosRegistros = 0;
+  let registrosAtualizados = 0;
+  for (const row of preview.rows) {
+    const key = duplicateKey(row);
+    const next = { ...row, importacaoId: importId, atualizadoEm: new Date().toISOString() };
+    if (existingByKey.has(key)) {
+      Object.assign(existingByKey.get(key), next);
+      registrosAtualizados += 1;
+    } else {
+      db.records.push({ id: id('rec_'), ...next, criadoEm: new Date().toISOString() });
+      existingByKey.set(key, next);
+      novosRegistros += 1;
+    }
+  }
+  const importInfo = {
+    id: importId,
+    nomeArquivo: preview.nomeArquivo,
+    quantidadeRegistros: preview.rows.length,
+    novosRegistros,
+    registrosAtualizados,
+    usuarioEmail: user.email,
+    criadaEm: new Date().toISOString(),
+  };
+  db.imports.unshift(importInfo);
+  db.importPreviews = (db.importPreviews || []).filter((item) => item.id !== previewId);
+  log(db, user, 'IMPORTOU_PLANILHA', importInfo);
+  await writeDb(db);
+  return { ok: true, importacao: importInfo, kpis: dashboard(recordsForUser(db, user)) };
+}
+
 function questionAnalysis(db, user, filters = {}) {
   const habilidades = db.habilidadesAplicadas || [];
   const filtered = habilidades.filter((item) => ['avaliacao', 'ano', 'disciplina', 'questao'].every((key) => !filters[key] || String(item[key]) === String(filters[key])));
@@ -442,8 +626,8 @@ async function request(method, path, data = undefined, options = {}) {
     await writeDb(db);
     return { ok: true, registrosRemovidos: before - db.records.length, totalImportacoes: db.imports.length, kpis: dashboard(filteredRecords(db, user, {})).kpis };
   }
-  if (method === 'POST' && route === 'imports/preview') throw { status: 501, error: 'Importação via GitHub Pages requer carga prévia dos dados no Supabase.' };
-  if (method === 'POST' && route === 'imports/commit') throw { status: 501, error: 'Importação via GitHub Pages requer carga prévia dos dados no Supabase.' };
+  if (method === 'POST' && route === 'imports/preview') return previewImport(db, user, data);
+  if (method === 'POST' && route === 'imports/commit') return commitImport(db, user, data?.previewId);
   if (method === 'GET' && (route === 'reports/pdf' || route === 'analysis/questions/pdf')) return new Blob(['Relatório disponível na visualização da tela.'], { type: 'application/pdf' });
   if (method === 'GET' && route === 'export/excel') return new Blob([csv(tableRows(filteredRecords(db, user, filtersFrom(path)), 100000))], { type: 'text/csv;charset=utf-8' });
   throw { status: 404, error: 'Rota não encontrada.' };
