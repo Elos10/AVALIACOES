@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "name": "avd-diagnostico-escolar",
   "version": "1.0.0",
@@ -11,3 +12,18 @@
     "node": "20"
   }
 }
+=======
+{
+  "name": "avd-diagnostico-escolar",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Plataforma AVD para GitHub Pages com Supabase.",
+  "scripts": {
+    "check": "node --check supabase-init.js && node --check public/app.js && node scripts/check-supabase-config.mjs"
+  },
+  "engines": {
+    "node": "20"
+  }
+}
+>>>>>>> bf3b26d80e10ac2f39b07c883f4f0cce3ff87f54
