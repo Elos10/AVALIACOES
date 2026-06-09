@@ -1,13 +1,12 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('PREENCHA')) {
   throw new Error('Configuracao do Supabase ausente.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const TABLE = 'avd_app_state';
 const DB_ID = 'db';
+const REST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
 const roles = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   GESTOR_SEMED: 'GESTOR SEMED',
@@ -103,15 +102,44 @@ function supabaseError(error) {
   return { status: 500, error: 'Falha ao acessar Supabase.', detail: message };
 }
 
-async function readDb() {
+async function supabaseRequest(path, options = {}) {
   let response;
   try {
-    response = await supabase.from(TABLE).select('value').eq('id', DB_ID).maybeSingle();
+    response = await fetch(`${REST_URL}${path}`, {
+      ...options,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Accept: 'application/json',
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(options.headers || {}),
+      },
+    });
   } catch (error) {
     throw supabaseError(error);
   }
-  const { data, error } = response;
-  if (error) throw { status: 500, error: 'Falha ao ler Supabase.', detail: error.message };
+  const text = await response.text();
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = text;
+    }
+  }
+  if (!response.ok) {
+    throw {
+      status: response.status,
+      error: payload?.message || payload?.error || 'Falha ao acessar Supabase.',
+      detail: payload?.details || payload?.hint || text,
+    };
+  }
+  return payload;
+}
+
+async function readDb() {
+  const rows = await supabaseRequest(`/${TABLE}?select=value&id=eq.${encodeURIComponent(DB_ID)}&limit=1`);
+  const data = Array.isArray(rows) ? rows[0] : null;
   const normalized = ensureDb(data?.value || seed());
   if (!data || normalized.changed) await writeDb(normalized.db);
   return normalized.db;
@@ -119,14 +147,11 @@ async function readDb() {
 
 async function writeDb(db) {
   const normalized = ensureDb(db);
-  let response;
-  try {
-    response = await supabase.from(TABLE).upsert({ id: DB_ID, value: normalized.db, updated_at: new Date().toISOString() });
-  } catch (error) {
-    throw supabaseError(error);
-  }
-  const { error } = response;
-  if (error) throw { status: 500, error: 'Falha ao gravar Supabase.', detail: error.message };
+  await supabaseRequest(`/${TABLE}`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: DB_ID, value: normalized.db, updated_at: new Date().toISOString() }),
+  });
   return normalized.db;
 }
 
@@ -429,4 +454,4 @@ function csv(rows) {
 }
 
 window.AVD_DB_REQUEST = request;
-window.AVD_SUPABASE_CLIENT = supabase;
+window.AVD_SUPABASE_CLIENT = { url: SUPABASE_URL, table: TABLE };
