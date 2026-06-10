@@ -9,6 +9,9 @@ const RECORDS_TABLE = 'avd_records';
 const DB_ID = 'db';
 const REST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
 const importPreviewCache = new Map();
+const DB_CACHE_MS = 120000;
+let dbCache = null;
+let dbCacheExpiresAt = 0;
 const roles = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   GESTOR_SEMED: 'GESTOR SEMED',
@@ -145,6 +148,7 @@ async function supabaseRequest(path, options = {}) {
 }
 
 async function readDb() {
+  if (dbCache && Date.now() < dbCacheExpiresAt) return dbCache;
   const rows = await supabaseRequest(`/${TABLE}?select=value&id=eq.${encodeURIComponent(DB_ID)}&limit=1`);
   const data = Array.isArray(rows) ? rows[0] : null;
   const normalized = ensureDb(data?.value || seed());
@@ -159,6 +163,8 @@ async function readDb() {
     normalized.db.recordsExternal = false;
     normalized.db.recordsSetupError = 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.';
   }
+  dbCache = normalized.db;
+  dbCacheExpiresAt = Date.now() + DB_CACHE_MS;
   return normalized.db;
 }
 
@@ -170,7 +176,14 @@ async function writeDb(db) {
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
     body: JSON.stringify({ id: DB_ID, value: stateDb, updated_at: new Date().toISOString() }),
   });
-  return { ...normalized.db, records: db.records || [] };
+  dbCache = { ...normalized.db, records: db.records || [] };
+  dbCacheExpiresAt = Date.now() + DB_CACHE_MS;
+  return dbCache;
+}
+
+function invalidateDbCache() {
+  dbCache = null;
+  dbCacheExpiresAt = 0;
 }
 
 function isMissingRecordsTable(error) {
@@ -222,6 +235,7 @@ async function upsertRecords(rows) {
       throw error;
     }
   }
+  invalidateDbCache();
 }
 
 async function deleteRecordsByImport(importId) {
@@ -234,6 +248,7 @@ async function deleteRecordsByImport(importId) {
     if (isMissingRecordsTable(error)) return;
     throw error;
   }
+  invalidateDbCache();
 }
 
 function parseToken(token) {
@@ -665,11 +680,15 @@ async function request(method, path, data = undefined, options = {}) {
     return { ok: true };
   }
   if (method === 'GET' && route === 'options') return optionsFor(db, user, filtersFrom(path));
-  if (method === 'GET' && route === 'dashboard') return dashboard(filteredRecords(db, user, filtersFrom(path)));
-  if (method === 'GET' && route === 'records') return { total: filteredRecords(db, user, filtersFrom(path)).length, rows: tableRows(filteredRecords(db, user, filtersFrom(path)), Number(new URLSearchParams(path.split('?')[1] || '').get('limit') || 500)) };
-  if (method === 'GET' && route === 'quality') return quality(filteredRecords(db, user, filtersFrom(path)));
-  if (method === 'GET' && route === 'analysis') return diagnosticAnalysis(filteredRecords(db, user, filtersFrom(path)));
-  if (method === 'GET' && route === 'statistics') return statisticalAnalysis(filteredRecords(db, user, filtersFrom(path)));
+  if (method === 'GET' && ['dashboard', 'records', 'quality', 'analysis', 'statistics'].includes(route)) {
+    const filters = filtersFrom(path);
+    const scoped = filteredRecords(db, user, filters);
+    if (route === 'dashboard') return dashboard(scoped);
+    if (route === 'records') return { total: scoped.length, rows: tableRows(scoped, Number(new URLSearchParams(path.split('?')[1] || '').get('limit') || 500)) };
+    if (route === 'quality') return quality(scoped);
+    if (route === 'analysis') return diagnosticAnalysis(scoped);
+    if (route === 'statistics') return statisticalAnalysis(scoped);
+  }
   if (method === 'GET' && route === 'compare') {
     const filters = filtersFrom(path);
     return comparisonByEvaluation(filteredRecords(db, user, filters), Array.isArray(filters.avaliacao) ? filters.avaliacao : filters.avaliacao ? [filters.avaliacao] : []);

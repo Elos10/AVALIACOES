@@ -38,6 +38,8 @@ const state = {
 };
 
 const app = document.querySelector("#app");
+const apiCache = new Map();
+let currentLoadId = 0;
 const filterOrder = ["avaliacao", "unidade", "ano", "turma", "disciplina", "aluno", "nivel", "raca", "inclusao"];
 const questionAnalysisFilterOrder = ["avaliacao", "ano", "disciplina", "questao"];
 const questionAnalysisFilterLabels = {
@@ -1214,7 +1216,7 @@ async function handleFilterChange(event) {
   clearChildFilters(key);
   state.loading = true;
   render();
-  await loadCurrent();
+  await scheduleLoadCurrent();
 }
 
 async function handleQuestionFilterChange(event) {
@@ -1227,7 +1229,18 @@ async function handleQuestionFilterChange(event) {
   clearQuestionChildFilters(key);
   state.loading = true;
   render();
-  await loadCurrent();
+  await scheduleLoadCurrent();
+}
+
+function scheduleLoadCurrent() {
+  const loadId = ++currentLoadId;
+  return new Promise((resolve) => {
+    setTimeout(async () => {
+      if (loadId !== currentLoadId) return resolve();
+      await loadCurrent(loadId);
+      resolve();
+    }, 160);
+  });
 }
 
 function clearQuestionChildFilters(parentKey) {
@@ -1311,7 +1324,7 @@ function logoutLocal() {
   Object.assign(state, { token: null, refreshToken: null, user: null, dashboard: null, rows: [], filters: {}, options: {} });
 }
 
-async function loadCurrent() {
+async function loadCurrent(loadId = ++currentLoadId) {
   try {
     if (state.view === "admin") await loadAdmin();
     else if (state.view === "importacoes") await loadImports();
@@ -1326,6 +1339,7 @@ async function loadCurrent() {
   } catch (error) {
     state.error = error.message;
   } finally {
+    if (loadId !== currentLoadId) return;
     state.loading = false;
     render();
   }
@@ -1433,6 +1447,7 @@ async function deleteImport(id) {
   const ok = confirm(`Excluir a importacao "${item?.nomeArquivo || id}"?\n\nOs registros vinculados a essa importacao serao removidos da base e os totais serao recalculados.`);
   if (!ok) return;
   const result = await api(`/imports/${id}`, { method: "DELETE" });
+  clearApiCache();
   state.message = `Importação excluída. Registros removidos: ${result.registrosRemovidos}.`;
   state.filters = {};
   await loadImports();
@@ -1592,6 +1607,7 @@ function renderImportPreview(result, activeTab) {
     const stopProgress = startImportProgress("IMPORTANDO DADOS");
     try {
       const committed = await api("/imports/commit", { method: "POST", body: { previewId: result.previewId, force: false } });
+      clearApiCache();
       stopProgress(100);
       state.message = "IMPORTAÇÃO DE DADOS EFETIVADA";
       state.filters = {};
@@ -1690,12 +1706,22 @@ async function changePassword() {
 
 async function api(url, options = {}) {
   if (!window.AVD_DB_REQUEST) throw new Error("Camada Supabase nao carregada. Confira supabase-init.js.");
+  const method = options.method || "GET";
+  const cacheKey = method === "GET" ? `${method}:${url}:${state.token || ""}` : "";
+  if (cacheKey && apiCache.has(cacheKey)) return structuredClone(apiCache.get(cacheKey));
   try {
-    return await window.AVD_DB_REQUEST(options.method || "GET", url, options.body || options.form, { token: state.token, auth: options.auth !== false });
+    const result = await window.AVD_DB_REQUEST(method, url, options.body || options.form, { token: state.token, auth: options.auth !== false });
+    if (cacheKey) apiCache.set(cacheKey, structuredClone(result));
+    if (method !== "GET") clearApiCache();
+    return result;
   } catch (error) {
     const message = error?.error || error?.message || "Falha na requisicao.";
     throw new Error(error?.detail ? `${message} ${error.detail}` : message);
   }
+}
+
+function clearApiCache() {
+  apiCache.clear();
 }
 
 function assetPath(fileName) {
