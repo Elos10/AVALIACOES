@@ -1050,6 +1050,13 @@ function colorForLevel(level) {
   return levelColors[normalizeLevel(level)] || "#667085";
 }
 
+function colorForDiscipline(discipline) {
+  const value = normalizeLevel(discipline);
+  if (value.includes("PORTUGUES")) return "#0057d9";
+  if (value.includes("MATEMATICA")) return "#16a34a";
+  return "#7c3aed";
+}
+
 function emptyState() {
   if (state.loading) return `<div class="loading-box">Carregando dados relacionados aos filtros selecionados...</div>`;
   if (!state.rows.length && Object.keys(state.filters).length) {
@@ -1058,9 +1065,15 @@ function emptyState() {
   return "";
 }
 
-function diagnosticCards(items) {
-  const active = items[state.activeDiagnosticIndex] || items[0];
-  return `<div class="diagnostic-buttons">${items.map((item, index) => `
+function diagnosticCards(items = []) {
+  const normalized = items.map((item) => ({
+    ...item,
+    tipo: item.tipo || item.prioridade || "Atenção",
+    titulo: item.titulo || `${item.label || item.questao || "Item"}${item.percentual !== undefined ? ` - ${item.percentual}%` : ""}`,
+    indicacao: item.indicacao || item.texto || `${item.label || item.questao || "Item"} requer acompanhamento pedagógico a partir dos resultados filtrados.`,
+  }));
+  const active = normalized[state.activeDiagnosticIndex] || normalized[0];
+  return `<div class="diagnostic-buttons">${normalized.map((item, index) => `
     <button data-diagnostic-index="${index}" class="${index === state.activeDiagnosticIndex ? "active" : ""}">
       <span class="badge">${esc(item.tipo)}</span>
       <strong>${esc(item.titulo)}</strong>
@@ -1737,12 +1750,13 @@ function assetPath(fileName) {
 }
 
 function drawCharts() {
-  if (!state.dashboard) return;
-  drawBars("levelChart", state.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
-  drawBars("unitChart", state.dashboard.rankingUnidades.slice(0, 8), "percentual", { suffix: "%", color: "#0057d9" });
-  drawBars("questionChart", state.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
-  drawDonut("donutChart", state.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
-  drawBars("compareChart", state.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
+  if (state.dashboard) {
+    drawBars("levelChart", state.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
+    drawBars("unitChart", state.dashboard.rankingUnidades.slice(0, 20), "percentual", { suffix: "%", color: "#0057d9", disciplinePalette: true, compact: true });
+    drawBars("questionChart", state.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
+    drawDonut("donutChart", state.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
+    drawBars("compareChart", state.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
+  }
   if (state.statistics) {
     drawBars("statsLevelChart", state.statistics.distribuicaoNivel, "value", { suffix: " alunos", levelPalette: true });
     drawBars("statsQuestionChart", state.statistics.questoes, "percentual", { suffix: "%", color: "#b54708", compact: true });
@@ -1793,7 +1807,7 @@ function drawBars(id, data, key, options = {}) {
       const bh = (cssH - padT - padB) * (Number(d[key] || 0) / max);
       const y = cssH - padB - bh;
       const active = i === hoverIndex;
-      const color = options.levelPalette ? colorForLevel(d.label) : shade(options.color || "#0038a8", i);
+      const color = options.levelPalette ? colorForLevel(d.label) : options.disciplinePalette && d.disciplina ? colorForDiscipline(d.disciplina) : shade(options.color || "#0038a8", i);
       const drawX = active ? x - 4 : x;
       const drawY = active ? Math.max(padT, y - 8) : y;
       const drawW = active ? bw + 8 : bw;
@@ -1828,7 +1842,9 @@ function drawBars(id, data, key, options = {}) {
     });
     const legendItems = options.levelPalette
       ? data.slice(0, 6).map((item) => ({ label: item.label, color: colorForLevel(item.label) }))
-      : [{ label: options.suffix === "%" ? "Percentual de acertos" : "Quantidade de alunos", color: options.color || "#0038a8" }];
+      : options.disciplinePalette && data.some((item) => item.disciplina)
+        ? [...new Map(data.filter((item) => item.disciplina).map((item) => [item.disciplina, { label: item.disciplina, color: colorForDiscipline(item.disciplina) }])).values()]
+        : [{ label: options.suffix === "%" ? "Percentual de acertos" : "Quantidade de alunos", color: options.color || "#0038a8" }];
     drawLegend(ctx, legendItems, cssW, cssH);
     updateChartRegistry(id, { bars });
   };

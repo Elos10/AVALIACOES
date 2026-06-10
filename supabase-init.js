@@ -348,8 +348,7 @@ function applyFilters(records, filters = {}) {
   return records.filter((row) => Object.entries(filterMap).every(([key, field]) => {
     const value = filters[key];
     if (!value || (Array.isArray(value) && !value.length)) return true;
-    const values = Array.isArray(value) ? value.map(String) : [String(value)];
-    return values.includes(String(row[field] ?? ''));
+    return valuesMatch(row[field], value);
   }));
 }
 
@@ -380,18 +379,19 @@ function parentFilters(filters, key) {
   return result;
 }
 
-function dashboard(records) {
+function dashboard(records, filters = {}) {
   const total = records.length;
   const pontos = sum(records, 'PONTOS');
   const possiveis = sum(records, 'PONTOS POSSIVEIS');
   const percentual = possiveis ? round((pontos / possiveis) * 100) : 0;
   const alunosPorNivel = groupCount(records, 'NIVEL');
+  const hasDisciplineFilter = Boolean(filters.disciplina && (!Array.isArray(filters.disciplina) || filters.disciplina.length));
   return {
     kpis: { totalAlunos: total, pontosPossiveis: possiveis, acertos: pontos, percentualAcertos: percentual },
     alunosPorNivel,
     desempenhoPorQuestao: questionPerformance(records),
     distribuicaoPercentualNivel: alunosPorNivel.map((item) => ({ ...item, percent: total ? round((item.value / total) * 100) : 0 })),
-    rankingUnidades: ranking(records, 'UNIDADE'),
+    rankingUnidades: hasDisciplineFilter ? ranking(records, 'UNIDADE') : rankingByUnitAndDiscipline(records),
     rankingTurmas: ranking(records, 'TURMA'),
   };
 }
@@ -415,6 +415,21 @@ function ranking(rows, field) {
   for (const row of rows) {
     const key = row[field] || 'Não informado';
     const item = map.get(key) || { label: key, alunos: 0, pontos: 0, possiveis: 0 };
+    item.alunos += 1;
+    item.pontos += Number(row.PONTOS || 0);
+    item.possiveis += Number(row['PONTOS POSSIVEIS'] || 0);
+    map.set(key, item);
+  }
+  return [...map.values()].map((item) => ({ ...item, percentual: item.possiveis ? round((item.pontos / item.possiveis) * 100) : 0 })).sort((a, b) => b.percentual - a.percentual);
+}
+
+function rankingByUnitAndDiscipline(rows) {
+  const map = new Map();
+  for (const row of rows) {
+    const unidade = row.UNIDADE || 'Não informado';
+    const disciplina = row.DISCIPLINA || 'Sem disciplina';
+    const key = `${unidade}|${disciplina}`;
+    const item = map.get(key) || { label: `${unidade} - ${disciplina}`, unidade, disciplina, alunos: 0, pontos: 0, possiveis: 0 };
     item.alunos += 1;
     item.pontos += Number(row.PONTOS || 0);
     item.possiveis += Number(row['PONTOS POSSIVEIS'] || 0);
@@ -463,13 +478,19 @@ function diagnosticAnalysis(records) {
       'Quais turmas precisam de reensino imediato?',
       'Quais questões indicam erro recorrente de leitura, cálculo ou conceito?',
     ],
-    pontosDeAtencao: weak.map((item) => ({
-      label: item.questao,
-      percentual: item.percentual,
-      avaliados: item.avaliados,
-      acertos: item.acertos,
-      prioridade: item.percentual < 50 ? 'Alta' : item.percentual < 70 ? 'Média' : 'Monitoramento',
-    })),
+    pontosDeAtencao: weak.map((item) => {
+      const prioridade = item.percentual < 50 ? 'Alta' : item.percentual < 70 ? 'Média' : 'Monitoramento';
+      return {
+        tipo: prioridade,
+        titulo: `${item.questao} - ${item.percentual}%`,
+        indicacao: `${item.questao} apresentou ${item.percentual}% de aproveitamento, com ${item.acertos} acertos em ${item.avaliados} avaliações. Recomenda-se retomar a habilidade correspondente e observar os distratores mais frequentes.`,
+        label: item.questao,
+        percentual: item.percentual,
+        avaliados: item.avaliados,
+        acertos: item.acertos,
+        prioridade,
+      };
+    }),
     questoesPrioritarias: weak,
     turmasPrioritarias: ranking(records, 'TURMA').sort((a, b) => a.percentual - b.percentual).slice(0, 8),
     unidadesPrioritarias: ranking(records, 'UNIDADE').sort((a, b) => a.percentual - b.percentual).slice(0, 8),
@@ -524,9 +545,30 @@ function normalizeHeader(value) {
   return String(value || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[ºª]/g, 'O')
     .replace(/\s+/g, ' ')
     .trim()
     .toUpperCase();
+}
+
+function normalizedComparable(value) {
+  return normalizeHeader(value).replace(/[^A-Z0-9]/g, '');
+}
+
+function valuesMatch(actual, expected) {
+  const values = Array.isArray(expected) ? expected : [expected];
+  const normalizedActual = normalizedComparable(actual);
+  return values.some((value) => {
+    if (value === undefined || value === null || value === '') return true;
+    return normalizedActual === normalizedComparable(value);
+  });
+}
+
+function questionFilterMatch(actual, expected) {
+  if (!expected || (Array.isArray(expected) && !expected.length)) return true;
+  const values = Array.isArray(expected) ? expected : [expected];
+  const actualNumber = Number(String(actual || '').replace(/\D/g, ''));
+  return values.some((value) => Number(String(value || '').replace(/\D/g, '')) === actualNumber);
 }
 
 function canonicalHeader(header) {
@@ -716,20 +758,31 @@ async function commitImport(db, user, previewId) {
 
 function questionAnalysis(db, user, filters = {}) {
   const habilidades = db.habilidadesAplicadas || [];
-  const filtered = habilidades.filter((item) => ['avaliacao', 'ano', 'disciplina', 'questao'].every((key) => !filters[key] || String(item[key]) === String(filters[key])));
+  const filtered = habilidades.filter((item) => (
+    valuesMatch(item.avaliacao, filters.avaliacao) &&
+    valuesMatch(item.ano, filters.ano) &&
+    valuesMatch(item.disciplina, filters.disciplina) &&
+    questionFilterMatch(item.questao, filters.questao)
+  ));
   const rows = filtered.map((item) => {
     const q = `Q${item.questao}`;
-    const records = filteredRecords(db, user, { avaliacao: item.avaliacao, ano: item.ano, disciplina: item.disciplina });
+    const recordFilters = { ...filters, avaliacao: item.avaliacao, ano: item.ano, disciplina: item.disciplina };
+    delete recordFilters.questao;
+    const records = filteredRecords(db, user, recordFilters);
     const avaliados = records.filter((row) => row[q] !== undefined && row[q] !== '').length;
     const acertos = records.filter((row) => String(row[q] || '').trim().toUpperCase() === String(item.alternativaCorreta || '').toUpperCase()).length;
     const distribuicaoRespostas = Object.fromEntries(['A', 'B', 'C', 'D', 'E'].map((alt) => [alt, records.filter((row) => String(row[q] || '').trim().toUpperCase() === alt).length]));
     return { ...item, questao: q, questaoNumero: item.questao, avaliados, acertos, erros: Math.max(avaliados - acertos, 0), percentual: avaliados ? round((acertos / avaliados) * 100) : 0, distribuicaoRespostas };
-  });
+  }).sort((a, b) => Number(a.questaoNumero || 0) - Number(b.questaoNumero || 0));
   return { filters, options: questionOptions(habilidades, filters), rows, inconsistencias: [], kpis: { habilidadesCadastradas: habilidades.length, habilidadesComDados: rows.filter((row) => row.avaliados).length, totalAvaliacoesQuestao: rows.reduce((s, row) => s + row.avaliados, 0), percentualMedio: rows.length ? round(rows.reduce((s, row) => s + row.percentual, 0) / rows.length) : 0 } };
 }
 
 function questionOptions(items, filters) {
-  const scoped = items.filter((item) => ['avaliacao', 'ano', 'disciplina'].every((key) => !filters[key] || String(item[key]) === String(filters[key])));
+  const scoped = items.filter((item) => (
+    valuesMatch(item.avaliacao, filters.avaliacao) &&
+    valuesMatch(item.ano, filters.ano) &&
+    valuesMatch(item.disciplina, filters.disciplina)
+  ));
   return { avaliacao: unique(items.map((i) => i.avaliacao)), ano: unique(scoped.map((i) => i.ano)), disciplina: unique(scoped.map((i) => i.disciplina)), questao: unique(scoped.map((i) => `Q${i.questao}`)) };
 }
 
@@ -776,7 +829,7 @@ async function request(method, path, data = undefined, options = {}) {
   if (method === 'GET' && ['dashboard', 'records', 'quality', 'analysis', 'statistics'].includes(route)) {
     const filters = filtersFrom(path);
     const scoped = filteredRecords(db, user, filters);
-    if (route === 'dashboard') return dashboard(scoped);
+    if (route === 'dashboard') return dashboard(scoped, filters);
     if (route === 'records') return { total: scoped.length, rows: tableRows(scoped, Number(new URLSearchParams(path.split('?')[1] || '').get('limit') || 500)) };
     if (route === 'quality') return quality(scoped);
     if (route === 'analysis') return diagnosticAnalysis(scoped);
