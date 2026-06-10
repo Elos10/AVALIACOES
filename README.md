@@ -9,7 +9,7 @@ Plataforma JavaScript para GitHub Pages com banco Supabase, seguindo o mesmo met
 - `supabase-init.js`: camada REST de dados no Supabase.
 - `public/app.js`: aplicacao AVD.
 - `public/styles.css`: estilos.
-- `supabase.sql`: criacao da tabela no Supabase.
+- `supabase.sql`: criacao das tabelas no Supabase.
 
 ## Configuracao Supabase
 
@@ -20,7 +20,9 @@ SUPABASE_URL=https://aluuqvuwfywijqnxjyos.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_oA4CsQXsV4aVL0wJT3gxlw_iUFcGMEY
 ```
 
-No Supabase, execute `supabase.sql` no SQL Editor para criar a tabela `avd_app_state` e liberar as politicas RLS usadas pelo GitHub Pages.
+No Supabase, execute `supabase.sql` no SQL Editor para criar as tabelas `avd_app_state` e `avd_records`, além das politicas RLS usadas pelo GitHub Pages.
+
+A tabela `avd_records` guarda os registros importados em lotes. Ela evita erro de timeout ao importar planilhas grandes, pois os alunos deixam de ser gravados dentro de um unico campo JSON.
 
 ## GitHub Pages
 
@@ -51,8 +53,10 @@ Cadastre este secret no GitHub:
 Exemplo:
 
 ```text
-postgresql://postgres:SUA-SENHA@db.aluuqvuwfywijqnxjyos.supabase.co:5432/postgres
+postgresql://postgres:SUA-SENHA@db.aluuqvuwfywijqnxjyos.supabase.co:5432/postgres?sslmode=require
 ```
+
+Se a senha tiver caracteres especiais, eles precisam estar codificados na URL. Exemplo: `@` deve virar `%40`.
 
 ## Verificacao
 

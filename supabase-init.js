@@ -5,6 +5,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY || SUPABASE_URL.includes('PREENCHA')) {
 }
 
 const TABLE = 'avd_app_state';
+const RECORDS_TABLE = 'avd_records';
 const DB_ID = 'db';
 const REST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
 const importPreviewCache = new Map();
@@ -144,17 +145,91 @@ async function readDb() {
   const data = Array.isArray(rows) ? rows[0] : null;
   const normalized = ensureDb(data?.value || seed());
   if (!data || normalized.changed) await writeDb(normalized.db);
+  try {
+    normalized.db.records = await readRecords();
+    normalized.db.recordsExternal = true;
+    delete normalized.db.recordsSetupError;
+  } catch (error) {
+    if (!isMissingRecordsTable(error)) throw error;
+    normalized.db.records = Array.isArray(normalized.db.records) ? normalized.db.records : [];
+    normalized.db.recordsExternal = false;
+    normalized.db.recordsSetupError = 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.';
+  }
   return normalized.db;
 }
 
 async function writeDb(db) {
   const normalized = ensureDb(db);
+  const stateDb = { ...normalized.db, records: [], importPreviews: [] };
   await supabaseRequest(`/${TABLE}`, {
     method: 'POST',
     headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify({ id: DB_ID, value: normalized.db, updated_at: new Date().toISOString() }),
+    body: JSON.stringify({ id: DB_ID, value: stateDb, updated_at: new Date().toISOString() }),
   });
-  return normalized.db;
+  return { ...normalized.db, records: db.records || [] };
+}
+
+function isMissingRecordsTable(error) {
+  const text = `${error?.error || ''} ${error?.detail || ''} ${error?.message || ''}`;
+  return error?.status === 404 || text.includes(RECORDS_TABLE) || text.includes('schema cache');
+}
+
+async function readRecords() {
+  const records = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    let rows;
+    try {
+      rows = await supabaseRequest(`/${RECORDS_TABLE}?select=id,importacao_id,duplicate_key,data&order=id.asc&limit=${pageSize}&offset=${offset}`);
+    } catch (error) {
+      if (isMissingRecordsTable(error)) {
+        throw { status: 500, error: 'Tabela de registros não encontrada.', detail: 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.' };
+      }
+      throw error;
+    }
+    for (const row of rows || []) {
+      records.push({ ...(row.data || {}), id: row.id, importacaoId: row.importacao_id });
+    }
+    if (!rows || rows.length < pageSize) break;
+  }
+  return records;
+}
+
+async function upsertRecords(rows) {
+  const chunkSize = 500;
+  for (let index = 0; index < rows.length; index += chunkSize) {
+    const chunk = rows.slice(index, index + chunkSize).map((row) => ({
+      id: row.id,
+      importacao_id: row.importacaoId,
+      duplicate_key: duplicateKey(row),
+      data: row,
+      updated_at: new Date().toISOString(),
+    }));
+    try {
+      await supabaseRequest(`/${RECORDS_TABLE}?on_conflict=id`, {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(chunk),
+      });
+    } catch (error) {
+      if (isMissingRecordsTable(error)) {
+        throw { status: 500, error: 'Tabela de registros não encontrada.', detail: 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.' };
+      }
+      throw error;
+    }
+  }
+}
+
+async function deleteRecordsByImport(importId) {
+  try {
+    await supabaseRequest(`/${RECORDS_TABLE}?importacao_id=eq.${encodeURIComponent(importId)}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+  } catch (error) {
+    if (isMissingRecordsTable(error)) return;
+    throw error;
+  }
 }
 
 function parseToken(token) {
@@ -483,21 +558,29 @@ async function previewImport(db, user, form) {
 }
 
 async function commitImport(db, user, previewId) {
+  if (db.recordsExternal !== true) {
+    throw { status: 500, error: 'Tabela de registros não encontrada.', detail: db.recordsSetupError || 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.' };
+  }
   const preview = importPreviewCache.get(previewId) || (db.importPreviews || []).find((item) => item.id === previewId && item.usuarioEmail === user.email);
   if (!preview) throw { status: 404, error: 'Conferência não encontrada. Confira a planilha novamente.' };
   const importId = id('imp_');
   const existingByKey = new Map((db.records || []).map((row) => [duplicateKey(row), row]));
+  const recordsToSave = [];
   let novosRegistros = 0;
   let registrosAtualizados = 0;
   for (const row of preview.rows) {
     const key = duplicateKey(row);
     const next = { ...row, importacaoId: importId, atualizadoEm: new Date().toISOString() };
     if (existingByKey.has(key)) {
-      Object.assign(existingByKey.get(key), next);
+      const existing = existingByKey.get(key);
+      Object.assign(existing, next);
+      recordsToSave.push(existing);
       registrosAtualizados += 1;
     } else {
-      db.records.push({ id: id('rec_'), ...next, criadoEm: new Date().toISOString() });
-      existingByKey.set(key, next);
+      const created = { id: id('rec_'), ...next, criadoEm: new Date().toISOString() };
+      db.records.push(created);
+      existingByKey.set(key, created);
+      recordsToSave.push(created);
       novosRegistros += 1;
     }
   }
@@ -514,6 +597,7 @@ async function commitImport(db, user, previewId) {
   db.importPreviews = (db.importPreviews || []).filter((item) => item.id !== previewId);
   importPreviewCache.delete(previewId);
   log(db, user, 'IMPORTOU_PLANILHA', importInfo);
+  await upsertRecords([...new Map(recordsToSave.map((row) => [row.id, row])).values()]);
   await writeDb(db);
   return { ok: true, importacao: importInfo, kpis: dashboard(recordsForUser(db, user)) };
 }
@@ -624,6 +708,7 @@ async function request(method, path, data = undefined, options = {}) {
   if (method === 'GET' && route === 'imports') return db.imports || [];
   if (method === 'DELETE' && p[0] === 'imports' && p[1]) {
     const before = db.records.length;
+    await deleteRecordsByImport(p[1]);
     db.records = db.records.filter((row) => row.importacaoId !== p[1]);
     db.imports = db.imports.filter((item) => item.id !== p[1]);
     await writeDb(db);
