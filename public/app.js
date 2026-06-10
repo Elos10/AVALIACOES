@@ -211,11 +211,6 @@ function dashboardView() {
       ${chartCard("Desempenho por unidade", "unitChart")}
       ${chartCard("Desempenho por questao", "questionChart")}
       ${chartCard("Distribuição percentual por nível", "donutChart")}
-      </section>
-      <section class="card">
-      <div class="toolbar"><h3>Tabela consolidada</h3><button id="exportCsv">Exportar Excel/CSV</button></div>
-      ${emptyState()}
-      ${tableHtml(state.rows)}
       </section>`}`;
 }
 
