@@ -24,5 +24,8 @@ if (!sql.includes('create table if not exists public.avd_app_state')) {
 if (!sql.includes('create table if not exists public.avd_records')) {
   throw new Error('supabase.sql deve criar public.avd_records para importacoes em lote');
 }
+if (!sql.includes('add column if not exists q20') || !sql.includes('add column if not exists pt_q20')) {
+  throw new Error('supabase.sql deve criar colunas Q1 a Q20 e PT_Q1 a PT_Q20 em public.avd_records');
+}
 
 console.log('GitHub Pages + Supabase REST config OK');

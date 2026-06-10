@@ -24,6 +24,10 @@ No Supabase, execute `supabase.sql` no SQL Editor para criar as tabelas `avd_app
 
 A tabela `avd_records` guarda os registros importados em lotes. Ela evita erro de timeout ao importar planilhas grandes, pois os alunos deixam de ser gravados dentro de um unico campo JSON.
 
+Para melhorar dashboards e relatorios, `avd_records` tambem possui colunas fisicas para filtros, totais, `Q1` a `Q20` e `PT_Q1` a `PT_Q20`. O campo `data jsonb` permanece apenas como compatibilidade e para campos extras futuros.
+
+Sempre que essa estrutura for alterada, execute novamente `supabase.sql` no SQL Editor do Supabase antes de usar a importacao.
+
 ## GitHub Pages
 
 O `index.html` carrega nesta ordem:

@@ -12,6 +12,15 @@ const importPreviewCache = new Map();
 const DB_CACHE_MS = 120000;
 let dbCache = null;
 let dbCacheExpiresAt = 0;
+const questionFields = Array.from({ length: 20 }, (_, index) => `Q${index + 1}`);
+const pointFields = Array.from({ length: 20 }, (_, index) => `PT_Q${index + 1}`);
+const recordColumns = [
+  'id', 'importacao_id', 'duplicate_key', 'avaliacao', 'unidade', 'ano', 'turma', 'disciplina', 'nome',
+  'email', 'nivel', 'raca', 'inclusao', 'pontos', 'pontos_possiveis', 'percentual_acertos',
+  ...questionFields.map((field) => field.toLowerCase()),
+  ...pointFields.map((field) => field.toLowerCase()),
+  'data',
+];
 const roles = {
   ADMINISTRADOR: 'ADMINISTRADOR',
   GESTOR_SEMED: 'GESTOR SEMED',
@@ -188,7 +197,7 @@ function invalidateDbCache() {
 
 function isMissingRecordsTable(error) {
   const text = `${error?.error || ''} ${error?.detail || ''} ${error?.message || ''}`;
-  return error?.status === 404 || text.includes(RECORDS_TABLE) || text.includes('schema cache');
+  return error?.status === 404 || text.includes(RECORDS_TABLE) || text.includes('schema cache') || text.includes('Could not find') || (text.includes('column') && text.includes('does not exist'));
 }
 
 async function readRecords() {
@@ -197,7 +206,7 @@ async function readRecords() {
   for (let offset = 0; ; offset += pageSize) {
     let rows;
     try {
-      rows = await supabaseRequest(`/${RECORDS_TABLE}?select=id,importacao_id,duplicate_key,data&order=id.asc&limit=${pageSize}&offset=${offset}`);
+      rows = await supabaseRequest(`/${RECORDS_TABLE}?select=${recordColumns.join(',')}&order=id.asc&limit=${pageSize}&offset=${offset}`);
     } catch (error) {
       if (isMissingRecordsTable(error)) {
         throw { status: 500, error: 'Tabela de registros não encontrada.', detail: 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.' };
@@ -205,7 +214,7 @@ async function readRecords() {
       throw error;
     }
     for (const row of rows || []) {
-      records.push({ ...(row.data || {}), id: row.id, importacaoId: row.importacao_id });
+      records.push(recordFromDb(row));
     }
     if (!rows || rows.length < pageSize) break;
   }
@@ -215,13 +224,7 @@ async function readRecords() {
 async function upsertRecords(rows) {
   const chunkSize = 500;
   for (let index = 0; index < rows.length; index += chunkSize) {
-    const chunk = rows.slice(index, index + chunkSize).map((row) => ({
-      id: row.id,
-      importacao_id: row.importacaoId,
-      duplicate_key: duplicateKey(row),
-      data: row,
-      updated_at: new Date().toISOString(),
-    }));
+    const chunk = rows.slice(index, index + chunkSize).map(recordToDb);
     try {
       await supabaseRequest(`/${RECORDS_TABLE}?on_conflict=id`, {
         method: 'POST',
@@ -236,6 +239,62 @@ async function upsertRecords(rows) {
     }
   }
   invalidateDbCache();
+}
+
+function recordFromDb(row) {
+  const record = { ...(row.data || {}) };
+  Object.assign(record, {
+    id: row.id,
+    importacaoId: row.importacao_id,
+    AVALIACAO: row.avaliacao ?? record.AVALIACAO ?? '',
+    UNIDADE: row.unidade ?? record.UNIDADE ?? '',
+    ANO: row.ano ?? record.ANO ?? '',
+    TURMA: row.turma ?? record.TURMA ?? '',
+    DISCIPLINA: row.disciplina ?? record.DISCIPLINA ?? '',
+    NOME: row.nome ?? record.NOME ?? '',
+    EMAIL: row.email ?? record.EMAIL ?? '',
+    NIVEL: row.nivel ?? record.NIVEL ?? '',
+    RAÇA: row.raca ?? record.RAÇA ?? '',
+    INCLUSÃO: row.inclusao ?? record.INCLUSÃO ?? '',
+    PONTOS: Number(row.pontos ?? record.PONTOS ?? 0),
+    'PONTOS POSSIVEIS': Number(row.pontos_possiveis ?? record['PONTOS POSSIVEIS'] ?? 0),
+    '% ACERTOS': Number(row.percentual_acertos ?? record['% ACERTOS'] ?? 0),
+  });
+  for (const field of questionFields) record[field] = row[field.toLowerCase()] ?? record[field] ?? '';
+  for (const field of pointFields) record[field] = Number(row[field.toLowerCase()] ?? record[field] ?? 0);
+  return normalizeRecord(record);
+}
+
+function recordToDb(row) {
+  const normalized = normalizeRecord(row);
+  const payload = {
+    id: normalized.id,
+    importacao_id: normalized.importacaoId,
+    duplicate_key: duplicateKey(normalized),
+    avaliacao: emptyToNull(normalized.AVALIACAO),
+    unidade: emptyToNull(normalized.UNIDADE),
+    ano: emptyToNull(normalized.ANO),
+    turma: emptyToNull(normalized.TURMA),
+    disciplina: emptyToNull(normalized.DISCIPLINA),
+    nome: emptyToNull(normalized.NOME),
+    email: emptyToNull(normalized.EMAIL),
+    nivel: emptyToNull(normalized.NIVEL),
+    raca: emptyToNull(normalized.RAÇA),
+    inclusao: emptyToNull(normalized.INCLUSÃO),
+    pontos: Number(normalized.PONTOS || 0),
+    pontos_possiveis: Number(normalized['PONTOS POSSIVEIS'] || 0),
+    percentual_acertos: Number(normalized['% ACERTOS'] || 0),
+    data: normalized,
+    updated_at: new Date().toISOString(),
+  };
+  for (const field of questionFields) payload[field.toLowerCase()] = emptyToNull(normalized[field]);
+  for (const field of pointFields) payload[field.toLowerCase()] = Number(normalized[field] || 0);
+  return payload;
+}
+
+function emptyToNull(value) {
+  const text = String(value ?? '').trim();
+  return text ? text : null;
 }
 
 async function deleteRecordsByImport(importId) {
