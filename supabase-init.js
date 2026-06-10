@@ -40,7 +40,7 @@ function seed() {
   return {
     version: 2,
     users: [
-      { id: id('usr_'), unidadeEscolar: 'SEMED', email: 'admin@semed.local', senha: 'Admin@123', perfil: roles.ADMINISTRADOR, ativo: true, criadoEm: now, atualizadoEm: now },
+      { id: id('usr_'), unidadeEscolar: 'SEMED', email: 'admin@semed.local', senha: 'admin123', perfil: roles.ADMINISTRADOR, ativo: true, criadoEm: now, atualizadoEm: now },
       { id: id('usr_'), unidadeEscolar: 'SEMED', email: 'gestor.semed@semed.local', senha: 'Semed@123', perfil: roles.GESTOR_SEMED, ativo: true, criadoEm: now, atualizadoEm: now },
     ],
     permissions,
@@ -91,6 +91,10 @@ function ensureDb(value) {
       changed = true;
     } else if (!existing.senha && !existing.senhaHash) {
       existing.senha = admin.senha;
+      changed = true;
+    } else if (admin.email === 'admin@semed.local' && existing.senha === 'Admin@123') {
+      existing.senha = 'admin123';
+      existing.atualizadoEm = new Date().toISOString();
       changed = true;
     }
   }

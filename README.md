@@ -76,5 +76,5 @@ npm run check
 
 ## Acessos iniciais
 
-- ADMINISTRADOR: `admin@semed.local` / `Admin@123`
+- ADMINISTRADOR: `admin@semed.local` / `admin123`
 - GESTOR SEMED: `gestor.semed@semed.local` / `Semed@123`
