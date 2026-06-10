@@ -1752,7 +1752,12 @@ function assetPath(fileName) {
 function drawCharts() {
   if (state.dashboard) {
     drawBars("levelChart", state.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
-    drawBars("unitChart", state.dashboard.rankingUnidades.slice(0, 20), "percentual", { suffix: "%", color: "#0057d9", disciplinePalette: true, compact: true });
+    const unitData = state.dashboard.rankingUnidades.slice(0, 60);
+    if (unitData.some((item) => item.unidade && item.disciplina)) {
+      drawGroupedBars("unitChart", unitData, "percentual", { suffix: "%", compact: true });
+    } else {
+      drawBars("unitChart", unitData.slice(0, 20), "percentual", { suffix: "%", color: "#0057d9", compact: true });
+    }
     drawBars("questionChart", state.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
     drawDonut("donutChart", state.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
     drawBars("compareChart", state.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
@@ -1778,7 +1783,7 @@ function drawBars(id, data, key, options = {}) {
       return drawNoData(ctx, cssW, cssH);
     }
     const max = Math.max(...data.map((d) => Number(d[key] || 0)), 1);
-    const padL = 44, padR = 18, padT = 24, padB = 76;
+    const padL = 44, padR = 18, padT = 24, padB = 96;
     const bars = [];
     ctx.clearRect(0, 0, cssW, cssH);
     ctx.strokeStyle = "#d7dde5";
@@ -1857,6 +1862,111 @@ function drawBars(id, data, key, options = {}) {
   });
 }
 
+function drawGroupedBars(id, data, key, options = {}) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const render = (hoverIndex = -1) => {
+    const ctx = setupCanvas(canvas);
+    const cssW = canvas.clientWidth || 640;
+    const cssH = 300;
+    if (!data.length) {
+      updateChartRegistry(id, { bars: [] });
+      return drawNoData(ctx, cssW, cssH);
+    }
+    const units = [...new Set(data.map((item) => item.unidade || item.label).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
+    const preferred = ["LINGUA PORTUGUESA", "MATEMATICA"];
+    const disciplines = [...new Set(data.map((item) => item.disciplina).filter(Boolean))]
+      .sort((a, b) => {
+        const ia = preferred.indexOf(normalizeLevel(a));
+        const ib = preferred.indexOf(normalizeLevel(b));
+        if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+        return String(a).localeCompare(String(b), "pt-BR");
+      });
+    const max = Math.max(...data.map((d) => Number(d[key] || 0)), 1);
+    const padL = 44, padR = 18, padT = 24, padB = 100;
+    const bars = [];
+    ctx.clearRect(0, 0, cssW, cssH);
+    ctx.strokeStyle = "#d7dde5";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, cssH - padB);
+    ctx.lineTo(cssW - padR, cssH - padB);
+    ctx.stroke();
+    ctx.fillStyle = "#667085";
+    ctx.font = "11px Segoe UI";
+    for (let i = 0; i <= 4; i += 1) {
+      const value = (max / 4) * i;
+      const y = cssH - padB - ((cssH - padT - padB) * i) / 4;
+      ctx.fillText(formatNumber(value), 6, y + 3);
+      ctx.strokeStyle = "#edf0f4";
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(cssW - padR, y);
+      ctx.stroke();
+    }
+    const slot = (cssW - padL - padR) / Math.max(units.length, 1);
+    const groupW = Math.min(slot * 0.74, 120);
+    const gap = 5;
+    const bw = Math.max((groupW - gap * Math.max(disciplines.length - 1, 0)) / Math.max(disciplines.length, 1), 8);
+    let barIndex = 0;
+    units.forEach((unit, unitIndex) => {
+      const baseX = padL + unitIndex * slot + (slot - groupW) / 2;
+      disciplines.forEach((discipline, disciplineIndex) => {
+        const item = data.find((entry) => entry.unidade === unit && entry.disciplina === discipline) || { unidade: unit, disciplina, label: unit, [key]: 0 };
+        const value = Number(item[key] || 0);
+        const bh = (cssH - padT - padB) * (value / max);
+        const x = baseX + disciplineIndex * (bw + gap);
+        const y = cssH - padB - bh;
+        const active = barIndex === hoverIndex;
+        const color = colorForDiscipline(discipline);
+        const drawX = active ? x - 3 : x;
+        const drawY = active ? Math.max(padT, y - 8) : y;
+        const drawW = active ? bw + 6 : bw;
+        const drawH = active ? bh + 8 : bh;
+        bars.push({ x, y, w: bw, h: Math.max(bh, 4), index: barIndex, item });
+        ctx.fillStyle = color;
+        if (active) {
+          ctx.shadowColor = "rgba(29, 36, 48, .24)";
+          ctx.shadowBlur = 14;
+          ctx.shadowOffsetY = 6;
+        }
+        roundRect(ctx, drawX, drawY, drawW, drawH, 6);
+        ctx.fill();
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        if (value > 0) {
+          ctx.fillStyle = "#1d2430";
+          ctx.font = active ? "bold 12px Segoe UI" : "bold 11px Segoe UI";
+          ctx.textAlign = "center";
+          ctx.fillText(`${formatNumber(value)}${options.suffix || ""}`, x + bw / 2, Math.max(14, y - 6));
+        }
+        if (active) drawTooltip(ctx, `${unit} | ${discipline}: ${formatNumber(value)}${options.suffix || ""}`, cssW, x + bw / 2, drawY - 10);
+        barIndex += 1;
+      });
+      ctx.fillStyle = "#344054";
+      ctx.font = "11px Segoe UI";
+      ctx.save();
+      ctx.translate(padL + unitIndex * slot + slot / 2, cssH - padB + 18);
+      ctx.rotate(-0.55);
+      ctx.textAlign = "right";
+      ctx.fillText(String(unit).slice(0, 20), 0, 0);
+      ctx.restore();
+    });
+    drawLegend(ctx, disciplines.map((discipline) => ({ label: discipline, color: colorForDiscipline(discipline) })), cssW, cssH);
+    updateChartRegistry(id, { bars });
+  };
+  const hoverIndex = chartRegistry.get(id)?.hoverIndex ?? -1;
+  render(hoverIndex);
+  bindChartHover(canvas, render, (point) => {
+    const bars = chartRegistry.get(id)?.bars || [];
+    const hit = bars.find((bar) => point.x >= bar.x && point.x <= bar.x + bar.w && point.y >= bar.y && point.y <= bar.y + bar.h);
+    return hit ? hit.index : -1;
+  });
+}
+
 function drawDonut(id, data, options = {}) {
   const canvas = document.getElementById(id);
   if (!canvas) return;
@@ -1872,7 +1982,7 @@ function drawDonut(id, data, options = {}) {
     const colors = ["#0038a8", "#0057d9", "#4f7ee8", "#7aa2f7", "#52637f"];
     const slices = [];
     let angle = -Math.PI / 2;
-    const cx = cssW * 0.34, cy = cssH * 0.5, r = Math.min(cssW * 0.28, cssH * 0.38);
+    const cx = cssW * 0.5, cy = cssH * 0.42, r = Math.min(cssW * 0.22, cssH * 0.26);
     ctx.clearRect(0, 0, cssW, cssH);
     data.forEach((d, i) => {
       const next = angle + (d.value / total) * Math.PI * 2;
@@ -1911,22 +2021,11 @@ function drawDonut(id, data, options = {}) {
     ctx.font = "11px Segoe UI";
     ctx.fillStyle = "#667085";
     ctx.fillText("alunos", cx, cy + 16);
-    data.forEach((d, i) => {
-      const y = 48 + i * 34;
-      const active = i === hoverIndex;
-      const color = options.levelPalette ? colorForLevel(d.label) : colors[i % colors.length];
-      ctx.fillStyle = color;
-      roundRect(ctx, cssW * 0.64, y - 12, active ? 20 : 16, active ? 20 : 16, 4);
-      ctx.fill();
-      ctx.fillStyle = active ? color : "#1d2430";
-      ctx.textAlign = "left";
-      ctx.font = active ? "bold 13px Segoe UI" : "bold 12px Segoe UI";
-      ctx.fillText(`${d.label}`, cssW * 0.64 + 24, y);
-      ctx.font = "12px Segoe UI";
-      ctx.fillStyle = "#667085";
-      ctx.fillText(`${d.value} alunos | ${d.percent}%`, cssW * 0.64 + 24, y + 16);
-      if (active) drawTooltip(ctx, `${d.label}: ${d.value} alunos | ${d.percent}%`, cssW, cx, cy - r - 12);
-    });
+    if (hoverIndex >= 0 && data[hoverIndex]) {
+      const d = data[hoverIndex];
+      drawTooltip(ctx, `${d.label}: ${d.value} alunos | ${d.percent}%`, cssW, cx, cy - r - 12);
+    }
+    drawLegend(ctx, data.slice(0, 6).map((d, i) => ({ label: `${d.label} (${d.percent}%)`, color: options.levelPalette ? colorForLevel(d.label) : colors[i % colors.length] })), cssW, cssH);
     updateChartRegistry(id, { slices });
   };
   const hoverIndex = chartRegistry.get(id)?.hoverIndex ?? -1;
@@ -2013,16 +2112,33 @@ function roundRect(ctx, x, y, width, height, radius) {
 }
 
 function drawLegend(ctx, items, width, height) {
-  ctx.textAlign = "right";
+  if (!items.length) return;
+  ctx.textAlign = "left";
   ctx.font = "12px Segoe UI";
-  items.forEach((item, index) => {
-    const x = width - 18;
-    const y = 16 + index * 20;
+  const measured = items.map((item) => ({ ...item, w: Math.min(ctx.measureText(item.label).width + 34, 190) }));
+  const rows = [[]];
+  let rowWidth = 0;
+  measured.forEach((item) => {
+    if (rowWidth + item.w > width - 36 && rows[rows.length - 1].length) {
+      rows.push([]);
+      rowWidth = 0;
+    }
+    rows[rows.length - 1].push(item);
+    rowWidth += item.w;
+  });
+  const baseY = height - 16 - (rows.length - 1) * 18;
+  rows.forEach((row, rowIndex) => {
+    const totalW = row.reduce((sum, item) => sum + item.w, 0);
+    let x = Math.max(18, (width - totalW) / 2);
+    const y = baseY + rowIndex * 18;
+    row.forEach((item) => {
     ctx.fillStyle = item.color;
-    roundRect(ctx, x - 140, y - 10, 14, 14, 4);
+      roundRect(ctx, x, y - 10, 14, 14, 4);
     ctx.fill();
     ctx.fillStyle = "#667085";
-    ctx.fillText(item.label, x, y + 1);
+      ctx.fillText(String(item.label).slice(0, 24), x + 20, y + 1);
+      x += item.w;
+    });
   });
 }
 
