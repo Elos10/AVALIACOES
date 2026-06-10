@@ -1805,8 +1805,8 @@ function drawBars(id, data, key, options = {}) {
       ctx.fillStyle = active ? color : "#344054";
       ctx.font = active ? "bold 11px Segoe UI" : "11px Segoe UI";
       ctx.save();
-      ctx.translaté(x + bw / 2, cssH - padB + 15);
-      ctx.rotaté(-0.55);
+      ctx.translate(x + bw / 2, cssH - padB + 15);
+      ctx.rotate(-0.55);
       ctx.textAlign = "right";
       ctx.fillText(String(d.label).slice(0, options.compact ? 8 : 18), 0, 0);
       ctx.restore();

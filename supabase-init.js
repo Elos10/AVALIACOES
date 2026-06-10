@@ -385,11 +385,12 @@ function dashboard(records) {
   const pontos = sum(records, 'PONTOS');
   const possiveis = sum(records, 'PONTOS POSSIVEIS');
   const percentual = possiveis ? round((pontos / possiveis) * 100) : 0;
+  const alunosPorNivel = groupCount(records, 'NIVEL');
   return {
     kpis: { totalAlunos: total, pontosPossiveis: possiveis, acertos: pontos, percentualAcertos: percentual },
-    alunosPorNivel: groupCount(records, 'NIVEL'),
+    alunosPorNivel,
     desempenhoPorQuestao: questionPerformance(records),
-    distribuicaoPercentualNivel: groupCount(records, 'NIVEL').map((item) => ({ ...item, value: total ? round((item.value / total) * 100) : 0 })),
+    distribuicaoPercentualNivel: alunosPorNivel.map((item) => ({ ...item, percent: total ? round((item.value / total) * 100) : 0 })),
     rankingUnidades: ranking(records, 'UNIDADE'),
     rankingTurmas: ranking(records, 'TURMA'),
   };
