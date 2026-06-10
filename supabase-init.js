@@ -422,7 +422,7 @@ function ranking(rows, field) {
   }
   return [...map.values()]
     .map((item) => ({ ...item, percentual: item.possiveis ? round((item.pontos / item.possiveis) * 100) : 0 }))
-    .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), 'pt-BR') || String(a.disciplina).localeCompare(String(b.disciplina), 'pt-BR'));
+    .sort((a, b) => b.percentual - a.percentual);
 }
 
 function rankingByUnitAndDiscipline(rows) {
@@ -437,7 +437,9 @@ function rankingByUnitAndDiscipline(rows) {
     item.possiveis += Number(row['PONTOS POSSIVEIS'] || 0);
     map.set(key, item);
   }
-  return [...map.values()].map((item) => ({ ...item, percentual: item.possiveis ? round((item.pontos / item.possiveis) * 100) : 0 })).sort((a, b) => b.percentual - a.percentual);
+  return [...map.values()]
+    .map((item) => ({ ...item, percentual: item.possiveis ? round((item.pontos / item.possiveis) * 100) : 0 }))
+    .sort((a, b) => String(a.unidade).localeCompare(String(b.unidade), 'pt-BR') || String(a.disciplina).localeCompare(String(b.disciplina), 'pt-BR'));
 }
 
 function questionPerformance(records) {

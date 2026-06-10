@@ -1752,7 +1752,7 @@ function assetPath(fileName) {
 function drawCharts() {
   if (state.dashboard) {
     drawBars("levelChart", state.dashboard.alunosPorNivel, "value", { suffix: " alunos", levelPalette: true });
-    const unitData = state.dashboard.rankingUnidades.slice(0, 60);
+    const unitData = state.dashboard.rankingUnidades;
     if (unitData.some((item) => item.unidade && item.disciplina)) {
       drawGroupedBars("unitChart", unitData, "percentual", { suffix: "%", compact: true });
     } else {
@@ -1777,13 +1777,13 @@ function drawBars(id, data, key, options = {}) {
   const render = (hoverIndex = -1) => {
     const ctx = setupCanvas(canvas);
     const cssW = canvas.clientWidth || 640;
-    const cssH = 300;
+    const cssH = canvas.clientHeight || 360;
     if (!data.length) {
       updateChartRegistry(id, { bars: [] });
       return drawNoData(ctx, cssW, cssH);
     }
     const max = Math.max(...data.map((d) => Number(d[key] || 0)), 1);
-    const padL = 44, padR = 18, padT = 24, padB = 96;
+    const padL = 44, padR = 18, padT = 26, padB = 128;
     const bars = [];
     ctx.clearRect(0, 0, cssW, cssH);
     ctx.strokeStyle = "#d7dde5";
@@ -1836,7 +1836,7 @@ function drawBars(id, data, key, options = {}) {
       ctx.fillStyle = active ? color : "#344054";
       ctx.font = active ? "bold 11px Segoe UI" : "11px Segoe UI";
       ctx.save();
-      ctx.translate(x + bw / 2, cssH - padB + 15);
+      ctx.translate(x + bw / 2, cssH - padB + 18);
       ctx.rotate(-0.55);
       ctx.textAlign = "right";
       ctx.fillText(String(d.label).slice(0, options.compact ? 8 : 18), 0, 0);
@@ -1868,7 +1868,7 @@ function drawGroupedBars(id, data, key, options = {}) {
   const render = (hoverIndex = -1) => {
     const ctx = setupCanvas(canvas);
     const cssW = canvas.clientWidth || 640;
-    const cssH = 300;
+    const cssH = canvas.clientHeight || 360;
     if (!data.length) {
       updateChartRegistry(id, { bars: [] });
       return drawNoData(ctx, cssW, cssH);
@@ -1884,7 +1884,7 @@ function drawGroupedBars(id, data, key, options = {}) {
         return String(a).localeCompare(String(b), "pt-BR");
       });
     const max = Math.max(...data.map((d) => Number(d[key] || 0)), 1);
-    const padL = 44, padR = 18, padT = 24, padB = 100;
+    const padL = 44, padR = 18, padT = 26, padB = 132;
     const bars = [];
     ctx.clearRect(0, 0, cssW, cssH);
     ctx.strokeStyle = "#d7dde5";
@@ -1949,7 +1949,7 @@ function drawGroupedBars(id, data, key, options = {}) {
       ctx.fillStyle = "#344054";
       ctx.font = "11px Segoe UI";
       ctx.save();
-      ctx.translate(padL + unitIndex * slot + slot / 2, cssH - padB + 18);
+      ctx.translate(padL + unitIndex * slot + slot / 2, cssH - padB + 22);
       ctx.rotate(-0.55);
       ctx.textAlign = "right";
       ctx.fillText(String(unit).slice(0, 20), 0, 0);
@@ -1973,7 +1973,7 @@ function drawDonut(id, data, options = {}) {
   const render = (hoverIndex = -1) => {
     const ctx = setupCanvas(canvas);
     const cssW = canvas.clientWidth || 640;
-    const cssH = 300;
+    const cssH = canvas.clientHeight || 360;
     if (!data.length) {
       updateChartRegistry(id, { slices: [] });
       return drawNoData(ctx, cssW, cssH);
@@ -1982,7 +1982,7 @@ function drawDonut(id, data, options = {}) {
     const colors = ["#0038a8", "#0057d9", "#4f7ee8", "#7aa2f7", "#52637f"];
     const slices = [];
     let angle = -Math.PI / 2;
-    const cx = cssW * 0.5, cy = cssH * 0.42, r = Math.min(cssW * 0.22, cssH * 0.26);
+    const cx = cssW * 0.5, cy = cssH * 0.38, r = Math.min(cssW * 0.22, cssH * 0.24);
     ctx.clearRect(0, 0, cssW, cssH);
     data.forEach((d, i) => {
       const next = angle + (d.value / total) * Math.PI * 2;
@@ -2090,11 +2090,12 @@ function drawTooltip(ctx, text, canvasWidth, x, y) {
 
 function setupCanvas(canvas) {
   const rect = canvas.getBoundingClientRect();
+  const cssHeight = 360;
   canvas.width = Math.max(320, Math.floor(rect.width * devicePixelRatio));
-  canvas.height = Math.floor(300 * devicePixelRatio);
+  canvas.height = Math.floor(cssHeight * devicePixelRatio);
   const ctx = canvas.getContext("2d");
   ctx.scale(devicePixelRatio, devicePixelRatio);
-  canvas.style.height = "300px";
+  canvas.style.height = `${cssHeight}px`;
   return ctx;
 }
 
