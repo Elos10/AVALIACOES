@@ -592,7 +592,7 @@ function reportsView() {
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
-    ${!hasFilters ? reportStartState() : state.reportMode === "estatística" ? `
+    ${!hasFilters ? reportStartState() : state.reportMode === "estatistica" ? `
       <section class="kpis">
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
         ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`)}
@@ -623,7 +623,7 @@ function reportsView() {
 function reportsSubnav() {
   return `<section class="subnav">
     <button data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
-    <button data-report-mode="estatística" class="${state.reportMode === "estatística" ? "active" : ""}">Analise Estatistica</button>
+    <button data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
     <button data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
     <button data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
   </section>`;
@@ -1088,6 +1088,14 @@ function bind() {
   document.querySelector("#backPage")?.addEventListener("click", goBack);
   document.querySelectorAll("[data-report-mode]").forEach((button) => button.addEventListener("click", async () => {
     state.reportMode = button.dataset.reportMode;
+    state.rows = [];
+    state.statistics = null;
+    state.analysis = null;
+    state.questionAnalysis = null;
+    state.dashboard = null;
+    clearApiCache();
+    state.loading = true;
+    render();
     await loadCurrent();
   }));
   document.querySelectorAll("[data-diagnostic-index]").forEach((button) => button.addEventListener("click", () => {
@@ -1354,11 +1362,12 @@ async function loadReports() {
   const qs = query();
   const optionsPayload = await api(`/options?${qs}`);
   applyOptionsPayload(optionsPayload);
+  state.rows = [];
+  state.statistics = null;
+  state.analysis = null;
+  state.questionAnalysis = null;
+  state.dashboard = null;
   if (!hasReportFilters()) {
-    state.rows = [];
-    state.statistics = null;
-    state.analysis = null;
-    state.questionAnalysis = null;
     return;
   }
   if (state.reportMode === "diagnostica") {
@@ -1374,9 +1383,12 @@ async function loadReports() {
     state.questionAnalysis = await api(`/analysis/questions?${qs}`);
     return;
   }
+  if (state.reportMode === "estatistica" || state.reportMode === "estatística") {
+    state.statistics = await api(`/statistics?${qs}`);
+    return;
+  }
   const recordsPayload = await api(`/records?limit=500&${qs}`);
   state.rows = recordsPayload.rows;
-  if (state.reportMode === "estatística") state.statistics = await api(`/statistics?${qs}`);
 }
 
 async function loadCompare() {

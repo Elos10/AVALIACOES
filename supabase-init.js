@@ -448,11 +448,31 @@ function tableRows(records, limit = 500) {
 }
 
 function diagnosticAnalysis(records) {
-  const weak = questionPerformance(records).filter((item) => item.avaliados).sort((a, b) => a.percentual - b.percentual).slice(0, 5);
+  const base = dashboard(records);
+  const weak = base.desempenhoPorQuestao.filter((item) => item.avaliados).sort((a, b) => a.percentual - b.percentual).slice(0, 5);
+  const criticos = records.filter((row) => normalizeHeader(row.NIVEL).includes('CRITICO')).length;
   return {
-    resumo: dashboard(records).kpis,
-    recomendacoes: weak.map((item) => ({ titulo: `${item.questao} - ${item.percentual}%`, texto: `Priorizar retomada pedagogica da ${item.questao}, analisando descritores, distratores e padroes de erro.` })),
-    pontosAbordar: weak,
+    resumo: {
+      ...base.kpis,
+      percentualGeral: base.kpis.percentualAcertos,
+      percentualCritico: records.length ? round((criticos / records.length) * 100) : 0,
+    },
+    recomendacoes: weak.map((item) => `Priorizar retomada pedagógica da ${item.questao}, analisando descritores, distratores e padrões de erro.`),
+    perguntasNorteadoras: [
+      'Quais habilidades concentram menor aproveitamento nos filtros selecionados?',
+      'Quais turmas precisam de reensino imediato?',
+      'Quais questões indicam erro recorrente de leitura, cálculo ou conceito?',
+    ],
+    pontosDeAtencao: weak.map((item) => ({
+      label: item.questao,
+      percentual: item.percentual,
+      avaliados: item.avaliados,
+      acertos: item.acertos,
+      prioridade: item.percentual < 50 ? 'Alta' : item.percentual < 70 ? 'Média' : 'Monitoramento',
+    })),
+    questoesPrioritarias: weak,
+    turmasPrioritarias: ranking(records, 'TURMA').sort((a, b) => a.percentual - b.percentual).slice(0, 8),
+    unidadesPrioritarias: ranking(records, 'UNIDADE').sort((a, b) => a.percentual - b.percentual).slice(0, 8),
   };
 }
 
@@ -462,7 +482,20 @@ function statisticalAnalysis(records) {
   const media = scores.length ? round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   const mediana = sorted.length ? round(sorted[Math.floor(sorted.length / 2)]) : 0;
   const variance = scores.length ? scores.reduce((acc, value) => acc + (value - media) ** 2, 0) / scores.length : 0;
-  return { resumo: { mediaPercentual: media, medianaPercentual: mediana, desvioPadraoPercentual: round(Math.sqrt(variance)) }, distribuicaoNivel: groupCount(records, 'NIVEL'), questoes: questionPerformance(records) };
+  return {
+    resumo: {
+      mediaPercentual: media,
+      medianaPercentual: mediana,
+      desvioPadraoPercentual: round(Math.sqrt(variance)),
+      minimoPercentual: sorted.length ? round(sorted[0]) : 0,
+      maximoPercentual: sorted.length ? round(sorted[sorted.length - 1]) : 0,
+      totalRegistros: records.length,
+    },
+    distribuicaoNivel: groupCount(records, 'NIVEL'),
+    questoes: questionPerformance(records),
+    unidades: ranking(records, 'UNIDADE'),
+    turmas: ranking(records, 'TURMA'),
+  };
 }
 
 function comparisonByEvaluation(records, evaluations = []) {
