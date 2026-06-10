@@ -40,6 +40,15 @@ jobs:
 
       - name: Aplicar schema Supabase
         if: steps.supabase-secret.outputs.configured == 'true'
+        id: apply-schema
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: psql "$SUPABASE_DB_URL" -f supabase.sql
+        shell: bash
+        run: |
+          set +e
+          psql "$SUPABASE_DB_URL" -f supabase.sql
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::Nao foi possivel aplicar o schema pelo GitHub Actions. Se aparecer Network is unreachable, use no secret SUPABASE_DB_URL a string Session pooler do Supabase, ou execute supabase.sql manualmente no SQL Editor."
+            exit 0
+          fi

@@ -50,10 +50,20 @@ Cadastre este secret no GitHub:
 
 - `SUPABASE_DB_URL`
 
-Exemplo:
+Use preferencialmente a string `Session pooler` do Supabase, porque o host direto `db.aluuqvuwfywijqnxjyos.supabase.co` pode usar IPv6 e falhar no GitHub Actions com `Network is unreachable`.
+
+Formato recomendado:
 
 ```text
-postgresql://postgres:SUA-SENHA@db.aluuqvuwfywijqnxjyos.supabase.co:5432/postgres?sslmode=require
+postgresql://postgres.aluuqvuwfywijqnxjyos:SUA-SENHA@HOST-POOLER-SUPABASE:5432/postgres?sslmode=require
+```
+
+Onde encontrar: Supabase > Project Settings > Database > Connection string > Session pooler.
+
+Senha atual informada:
+
+```text
+DeticSemed2025
 ```
 
 Se a senha tiver caracteres especiais, eles precisam estar codificados na URL. Exemplo: `@` deve virar `%40`.

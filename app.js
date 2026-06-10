@@ -41,43 +41,43 @@ const app = document.querySelector("#app");
 const filterOrder = ["avaliacao", "unidade", "ano", "turma", "disciplina", "aluno", "nivel", "raca", "inclusao"];
 const questionAnalysisFilterOrder = ["avaliacao", "ano", "disciplina", "questao"];
 const questionAnalysisFilterLabels = {
-  avaliacao: "Avaliacao",
+  avaliacao: "Avaliação",
   ano: "Ano",
   disciplina: "Disciplina",
-  questao: "Questao",
+  questao: "Questão",
 };
-const habilidadeYears = ["1Âº ANO", "2Âº ANO", "3Âº ANO", "4Âº ANO", "5Âº ANO", "6Âº ANO", "7Âº ANO", "8Âº ANO", "9Âº ANO"];
-const habilidadeDisciplines = ["Portugu\u00eas", "Matem\u00e1tica"];
+const habilidadeYears = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
+const habilidadeDisciplines = ["Portugu\u00eas", "Matém\u00e1tica"];
 const habilidadeAlternatives = ["A", "B", "C", "D", "E"];
 const habilidadeQuestionLimits = {
-  "1Âº ANO": 10,
-  "2Âº ANO": 10,
-  "3Âº ANO": 10,
-  "4Âº ANO": 15,
-  "5Âº ANO": 15,
-  "6Âº ANO": 20,
-  "7Âº ANO": 20,
-  "8Âº ANO": 20,
-  "9Âº ANO": 20,
+  "1º ANO": 10,
+  "2º ANO": 10,
+  "3º ANO": 10,
+  "4º ANO": 15,
+  "5º ANO": 15,
+  "6º ANO": 20,
+  "7º ANO": 20,
+  "8º ANO": 20,
+  "9º ANO": 20,
 };
 const filterLabels = {
-  avaliacao: "Avaliacao",
+  avaliacao: "Avaliação",
   unidade: "Unidade",
   ano: "Ano",
   turma: "Turma",
   disciplina: "Disciplina",
   aluno: "Aluno",
-  nivel: "Nivel",
-  raca: "Raca",
-  inclusao: "Inclusao",
+  nivel: "Nível",
+  raca: "Raça",
+  inclusao: "Inclusão",
 };
 const levelColors = {
   "MUITO CRITICO": "#F97316",
-  "MUITO CRÃTICO": "#F97316",
+  "MUITO CRÍTICO": "#F97316",
   "CRITICO": "#2563EB",
-  "CRÃTICO": "#2563EB",
+  "CRÍTICO": "#2563EB",
   "SATISFATORIO": "#16A34A",
-  "SATISFATÃ“RIO": "#16A34A",
+  "SATISFATÓRIO": "#16A34A",
 };
 const chartRegistry = new Map();
 
@@ -98,6 +98,7 @@ async function boot() {
 }
 
 function render() {
+  app.dataset.loaded = "true";
   app.innerHTML = state.user ? shell() : loginView();
   bind();
   drawCharts();
@@ -107,13 +108,13 @@ function loginView() {
   return `
     <section class="login">
       <div class="login-panel">
-        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educacao de Uberaba">
-        <h1>AVD Diagnostico Escolar</h1>
-        <p>Consulta, analise e relatorios diagnosticos por perfil de acesso.</p>
+        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
+        <h1>AVD Diagnóstico Escolar</h1>
+        <p>Consulta, análise e relatórios diagnósticos por perfil de acesso.</p>
         ${alertHtml()}
         <form id="loginForm">
-          <label>E-mail <input name="email" type="email" required autocomplete="username" value="admin@semed.local"></label>
-          <label>Senha <input name="password" type="password" required autocomplete="current-password" value="Admin@123"></label>
+          <label>E-mail <input name="email" type="email" required autocomplete="username" placeholder="Digite seu e-mail"></label>
+          <label>Senha <input name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha"></label>
           <button class="primary" type="submit">Entrar</button>
         </form>
       </div>
@@ -124,13 +125,13 @@ function shell() {
   const nav = [
     ["dashboard", "Dashboard", "dashboard"],
     ["bncc", "Habilidades BNCC", "bncc"],
-    ["curriculoMunicipal", "Curriculo Municipal", "bncc", true],
+    ["curriculoMunicipal", "Currículo Municipal", "bncc", true],
     ["habilidadesAplicadas", "Cadastro de Habilidades Aplicadas", "habilidadesAplicadas"],
-    ["relatorios", "Relatorios", "relatorios"],
+    ["relatorios", "Relatórios", "relatorios"],
     ["qualidade", "Qualidade dos dados", "qualidade"],
     ["comparativo", "Comparativo", "comparativo"],
-    ["importacoes", "Importacoes", "importacoes"],
-    ["admin", "Administracao", "admin"],
+    ["importacoes", "Importações", "importacoes"],
+    ["admin", "Administração", "admin"],
   ].filter(([, , permissionKey]) => state.permissions[permissionKey] !== false);
   return `
     <section class="shell">
@@ -199,7 +200,7 @@ function dashboardView() {
     ${!hasFilters ? dashboardStartState() : `
       <section class="kpis">
       ${kpi("Alunos avaliados", k.totalAlunos || 0)}
-      ${kpi("Pontos possiveis", k.pontosPossiveis || 0)}
+      ${kpi("Pontos possíveis", k.pontosPossiveis || 0)}
       ${kpi("Acertos", k.acertos || 0)}
       ${kpi("% de acertos", `${k.percentualAcertos || 0}%`)}
       </section>
@@ -207,7 +208,7 @@ function dashboardView() {
       ${chartCard("Alunos por nivel", "levelChart")}
       ${chartCard("Desempenho por unidade", "unitChart")}
       ${chartCard("Desempenho por questao", "questionChart")}
-      ${chartCard("Distribuicao percentual por nivel", "donutChart")}
+      ${chartCard("Distribuição percentual por nível", "donutChart")}
       </section>
       <section class="card">
       <div class="toolbar"><h3>Tabela consolidada</h3><button id="exportCsv">Exportar Excel/CSV</button></div>
@@ -219,7 +220,7 @@ function dashboardView() {
 function dashboardStartState() {
   return `<section class="card dashboard-start">
     <h3>Selecione os filtros para visualizar os resultados</h3>
-    <p class="muted">As informaÃ§Ãµes do dashboard serÃ£o carregadas somente apÃ³s vocÃª indicar quais dados deseja consultar nos filtros acima.</p>
+    <p class="muted">As informações do dashboard serão carregadas somente após você indicar quais dados deseja consultar nos filtros acima.</p>
   </section>`;
 }
 
@@ -276,13 +277,13 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
         <button class="primary" id="questionAnalysisPdf">Criar Relatorio em PDF</button>
         <button id="questionImmersion" class="${state.showQuestionImmersion ? "active" : ""}">Imersao</button>
       </div>
-      <p class="muted">O PDF sera gerado em A4 paisagem, com fonte Arial tamanho 11, respeitando os filtros aplicados. A Imersao consolida acoes pedagogicas do Curriculo Municipal a partir das questoes filtradas.</p>
+      <p class="muted">O PDF sera gerado em A4 paisagem, com fonte Arial tamanho 11, respeitando os filtros aplicados. A Imersao consolida acoes pedagogicas do Currículo Municipal a partir das questoes filtradas.</p>
     </section>
     ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
       ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0)}
       ${kpi("Com dados correlatos", k.habilidadesComDados || 0)}
-      ${kpi("Avaliacoes por questao", k.totalAvaliacoesQuestao || 0)}
+      ${kpi("Avaliações por questão", k.totalAvaliacoesQuestao || 0)}
       ${kpi("% medio", `${k.percentualMedio || 0}%`)}
     </section>
     <section class="charts">
@@ -296,7 +297,7 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
       </section>
     </section>
     <section class="card">
-      <h3>Analise diagnostica por habilidade e questao</h3>
+      <h3>Análise diagnóstica por habilidade e questão</h3>
       ${consolidatedRows.length ? `<div class="question-analysis-list">
         ${consolidatedRows.map((row) => questionAnalysisCard(row)).join("")}
       </div>` : `<div class="empty-box">Nenhum cadastro de habilidade aplicada encontrado para os filtros selecionados.</div>`}
@@ -377,7 +378,7 @@ function consolidatedQuestionRows(rows) {
         descritorUsado: descritores.length > 1 ? descritores.join(" | ") : (descritores[0] || row.descritorUsado),
         objetoConhecimento: objetos.length > 1 ? objetos.join(" | ") : (objetos[0] || row.objetoConhecimento),
         diagnostico: row.ids.length > 1
-          ? `Questao consolidada a partir de ${row.ids.length} cadastros correlatos. ${row.diagnostico || ""}`
+          ? `Questão consolidada a partir de ${row.ids.length} cadastros correlatos. ${row.diagnostico || ""}`
           : row.diagnostico,
       };
     })
@@ -388,7 +389,7 @@ function questionImmersionView(data) {
   const plan = buildQuestionImmersionPlan(data);
   if (!plan.rows.length) {
     return `<section class="card immersion-panel">
-      <h3>Imersao pedagogica do Curriculo Municipal</h3>
+      <h3>Imersao pedagogica do Currículo Municipal</h3>
       <div class="empty-box">Nenhum resultado encontrado para consolidar a imersao. Ajuste os filtros da analise diagnostica das questoes.</div>
     </section>`;
   }
@@ -425,12 +426,12 @@ function questionImmersionView(data) {
         ])}
       </div>
       <div class="immersion-chart-card">
-        <h3>Questoes de menor aproveitamento</h3>
+        <h3>Questões de menor aproveitamento</h3>
         ${immersionBars(plan.priorityRows.slice(0, 6).map((row) => [row.questao, row.percentual, "#0057d9"]), "%")}
       </div>
     </div>
     <div class="immersion-grid">
-      ${immersionQuadrant("1. Reensino focal do Curriculo Municipal", "CURR", "Retomar objetos do conhecimento com menor dominio.", [
+      ${immersionQuadrant("1. Reensino focal do Currículo Municipal", "CURR", "Retomar objetos do conhecimento com menor dominio.", [
         `Habilidades foco: ${focusItems.length ? focusItems.join("; ") : "manter acompanhamento das questoes filtradas"}.`,
         `Ancoragem curricular: ${curriculumAnchors.length ? curriculumAnchors.join("; ") : "usar os objetos do conhecimento cadastrados no planejamento"}.`,
         "Planejar miniaulas de 20 a 30 minutos com modelagem, exemplos guiados e checagem rapida de compreensao.",
@@ -443,7 +444,7 @@ function questionImmersionView(data) {
       ${immersionQuadrant("3. Rotacao imersiva por estacoes", "ACAO", "Atender grupos com necessidades diferentes sem perder o foco da turma.", [
         "Estacao 1: retomada orientada pelo professor nas questoes de prioridade alta.",
         "Estacao 2: pratica colaborativa com itens semelhantes e justificativa de alternativas.",
-        "Estacao 3: desafio do Curriculo Municipal com situacoes-problema conectadas ao objeto do conhecimento.",
+        "Estacao 3: desafio do Currículo Municipal com situacoes-problema conectadas ao objeto do conhecimento.",
       ])}
       ${immersionQuadrant("4. Monitoramento de impacto", "META", "Medir se a intervencao elevou o aproveitamento.", [
         "Aplicar sondagem curta apos a imersao com itens equivalentes aos descritores trabalhados.",
@@ -593,7 +594,7 @@ function reportsView() {
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
-    ${!hasFilters ? reportStartState() : state.reportMode === "estatistica" ? `
+    ${!hasFilters ? reportStartState() : state.reportMode === "estatística" ? `
       <section class="kpis">
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
         ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`)}
@@ -605,12 +606,12 @@ function reportsView() {
         ${chartCard("Desempenho por questao", "statsQuestionChart")}
       </section>
       <section class="card">
-        <h3>Analise estatistica por unidade</h3>
+        <h3>Análise estatística por unidade</h3>
         ${stats ? miniTable("Unidades", stats.unidades.slice(0, 20), ["label", "percentual", "alunos"]) : ""}
       </section>
     ` : `
     <section class="card">
-      <h3>Relatorios</h3>
+      <h3>Relatórios</h3>
       <p class="muted">Os arquivos respeitam os filtros aplicados e as permissoes do perfil logado.</p>
       <div class="toolbar">
         <button class="primary" id="pdfReport">Baixar PDF</button>
@@ -624,7 +625,7 @@ function reportsView() {
 function reportsSubnav() {
   return `<section class="subnav">
     <button data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
-    <button data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
+    <button data-report-mode="estatística" class="${state.reportMode === "estatística" ? "active" : ""}">Analise Estatistica</button>
     <button data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
     <button data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
   </section>`;
@@ -633,29 +634,29 @@ function reportsSubnav() {
 function reportStartState() {
   return `<section class="card dashboard-start">
     <h3>Selecione os filtros para visualizar o relatorio</h3>
-    <p class="muted">As informacoes dos relatorios serao apresentadas somente depois da escolha dos filtros acima, mantendo o mesmo contexto para todas as abas.</p>
+    <p class="muted">As informações dos relatorios serao apresentadas somente depois da escolha dos filtros acima, mantendo o mesmo contexto para todas as abas.</p>
   </section>`;
 }
 
 function bnccView() {
   const shortcuts = [
-    ["EducaÃ§Ã£o Infantil", "Direitos de aprendizagem e campos de experiÃªncias"],
-    ["Ensino Fundamental", "Habilidades por Ã¡rea, componente, ano e objeto de conhecimento"],
-    ["Linguagens", "LÃ­ngua Portuguesa, Arte, EducaÃ§Ã£o FÃ­sica e LÃ­ngua Inglesa"],
-    ["MatemÃ¡tica", "Unidades temÃ¡ticas, objetos de conhecimento e habilidades"],
-    ["CiÃªncias da Natureza", "CiÃªncias e habilidades por ano"],
-    ["CiÃªncias Humanas", "Geografia e HistÃ³ria"],
+    ["Educação Infantil", "Direitos de aprendizagem e campos de experiências"],
+    ["Ensino Fundamental", "Habilidades por área, componente, ano e objeto de conhecimento"],
+    ["Linguagens", "Língua Portuguesa, Arte, Educação Física e Língua Inglesa"],
+    ["Matémática", "Unidades temáticas, objetos de conhecimento e habilidades"],
+    ["Ciências da Natureza", "Ciências e habilidades por ano"],
+    ["Ciências Humanas", "Geografia e História"],
     ["Ensino Religioso", "Habilidades do Ensino Fundamental"],
-    ["Ensino MÃ©dio", "CompetÃªncias e habilidades por Ã¡rea"],
+    ["Ensino Médio", "Competências e habilidades por área"],
   ];
   return `
     <section class="card bncc-header">
       <div>
         <h3>Habilidades BNCC</h3>
-        <p class="muted">Consulta somente leitura da Base Nacional Comum Curricular, a partir das fontes oficiais do MinistÃ©rio da EducaÃ§Ã£o.</p>
+        <p class="muted">Consulta somente leitura da Base Nacional Comum Curricular, a partir das fontes oficiais do Ministério da Educação.</p>
       </div>
       <div class="toolbar">
-        <a class="button-link primary" href="https://basenacionalcomum.mec.gov.br/abase/" target="_blank" rel="noopener">Abrir BNCC navegÃ¡vel</a>
+        <a class="button-link primary" href="https://basenacionalcomum.mec.gov.br/abase/" target="_blank" rel="noopener">Abrir BNCC navegável</a>
         <a class="button-link" href="https://basenacionalcomum.mec.gov.br/images/BNCC_EI_EF_110518_versaofinal_site.pdf" target="_blank" rel="noopener">PDF oficial EI/EF</a>
       </div>
     </section>
@@ -668,12 +669,12 @@ function bnccView() {
       </div>
       <div class="card">
         <h3>Fonte oficial</h3>
-        <p class="muted">A BNCC define aprendizagens essenciais, competÃªncias e habilidades para a EducaÃ§Ã£o BÃ¡sica. A consulta abaixo carrega o documento navegÃ¡vel oficial do MEC.</p>
-        <p class="muted">Caso o navegador bloqueie a visualizaÃ§Ã£o incorporada, use o botÃ£o â€œAbrir BNCC navegÃ¡velâ€.</p>
+        <p class="muted">A BNCC define aprendizagens essenciais, competências e habilidades para a Educação Básica. A consulta abaixo carrega o documento navegável oficial do MEC.</p>
+        <p class="muted">Caso o navegador bloqueie a visualização incorporada, use o botão “Abrir BNCC navegável”.</p>
       </div>
     </section>
     <section class="card bncc-frame-card">
-      <iframe class="bncc-frame" title="BNCC navegÃ¡vel - MinistÃ©rio da EducaÃ§Ã£o" src="https://basenacionalcomum.mec.gov.br/abase/"></iframe>
+      <iframe class="bncc-frame" title="BNCC navegável - Ministério da Educação" src="https://basenacionalcomum.mec.gov.br/abase/"></iframe>
     </section>`;
 }
 
@@ -684,16 +685,16 @@ function curriculoMunicipalView() {
       title: "Lingua Portuguesa - 1o ao 9o ano",
       area: "Linguagens",
       estrutura: "Campos de atuacao, praticas de linguagem, objetos de conhecimento e habilidades",
-      text: "Curriculo Municipal de Lingua Portuguesa, organizado para consulta por ano, campos de atuacao, praticas de linguagem, objetos de conhecimento e habilidades.",
+      text: "Currículo Municipal de Lingua Portuguesa, organizado para consulta por ano, campos de atuacao, praticas de linguagem, objetos de conhecimento e habilidades.",
       href: assetPath("curriculo-municipal-lingua-portuguesa.pdf"),
     },
     {
-      id: "matematica",
-      title: "Matematica - 1o ao 9o ano",
-      area: "Matematica",
+      id: "matématica",
+      title: "Matématica - 1o ao 9o ano",
+      area: "Matématica",
       estrutura: "Unidades tematicas, objetos de conhecimento, habilidades e sugestoes didaticas",
-      text: "Curriculo Municipal de Matematica, com unidades tematicas, objetos de conhecimento e habilidades para apoiar a analise pedagogica dos resultados.",
-      href: assetPath("curriculo-municipal-matematica.pdf"),
+      text: "Currículo Municipal de Matématica, com unidades tematicas, objetos de conhecimento e habilidades para apoiar a analise pedagogica dos resultados.",
+      href: assetPath("curriculo-municipal-matématica.pdf"),
     },
   ];
   const selected = docs.find((doc) => doc.id === state.curriculoMunicipalDoc);
@@ -701,12 +702,12 @@ function curriculoMunicipalView() {
   return `
     <section class="card bncc-header">
       <div>
-        <h3>Curriculo Municipal</h3>
+        <h3>Currículo Municipal</h3>
         <p class="muted">Consulta somente leitura dos documentos curriculares municipais carregados no sistema, seguindo a mesma organizacao visual da tela Habilidades BNCC.</p>
       </div>
       <div class="toolbar">
         <a class="button-link primary" href="${assetPath("curriculo-municipal-lingua-portuguesa.pdf")}" target="_blank" rel="noopener">Lingua Portuguesa</a>
-        <a class="button-link" href="${assetPath("curriculo-municipal-matematica.pdf")}" target="_blank" rel="noopener">Matematica</a>
+        <a class="button-link" href="${assetPath("curriculo-municipal-matématica.pdf")}" target="_blank" rel="noopener">Matématica</a>
       </div>
     </section>
     <section class="bncc-grid">
@@ -727,7 +728,7 @@ function curriculoMunicipalView() {
           </article>
           <article>
             <strong>Uso pedagogico</strong>
-            <span>Referencia para relatorios, analise diagnostica, imersao e cadastro de habilidades aplicadas.</span>
+            <span>Referência para relatorios, analise diagnostica, imersao e cadastro de habilidades aplicadas.</span>
           </article>
         </div>
       </div>
@@ -745,7 +746,7 @@ function curriculoMunicipalOverview() {
   if (!docs.length) {
     return `<section class="card">
       <h3>Consulta curricular resumida</h3>
-      <p class="muted">As informacoes resumidas do Curriculo Municipal serao carregadas automaticamente para visualizacao.</p>
+      <p class="muted">As informações resumidas do Currículo Municipal serao carregadas automaticamente para visualizacao.</p>
     </section>`;
   }
   return `<section class="card">
@@ -801,14 +802,14 @@ function habilidadesAplicadasView() {
             <option value="">${draft.ano ? "Selecione a questao" : "Selecione o ano primeiro"}</option>
             ${Array.from({ length: questionLimit || 0 }, (_, index) => index + 1).map((number) => `<option value="${number}" ${String(draft.questao) === String(number) ? "selected" : ""}>Q${number}</option>`).join("")}
           </select>
-          ${helpText(errors.questao || (draft.ano ? `Este ano permite ate ${questionLimit} questoes.` : "O limite sera definido automaticamente pelo ano selecionado."))}
+          ${helpText(errors.questao || (draft.ano ? `Este ano permite até ${questionLimit} questoes.` : "O limite sera definido automaticamente pelo ano selecionado."))}
         </label>
         <label class="span-2 ${errors.objetoConhecimento ? "field-error" : ""}">Objeto do Conhecimento
           <textarea name="objetoConhecimento" data-habilidade-field="objetoConhecimento" required rows="4" placeholder="Descreva o objeto do conhecimento avaliado.">${esc(draft.objetoConhecimento)}</textarea>
           ${helpText(errors.objetoConhecimento)}
         </label>
         <label class="${errors.descritorUsado ? "field-error" : ""}">Descritor Usado
-          <input name="descritorUsado" data-habilidade-field="descritorUsado" required value="${esc(draft.descritorUsado)}" placeholder="Ex.: D01, D05, habilidade do Curriculo Municipal...">
+          <input name="descritorUsado" data-habilidade-field="descritorUsado" required value="${esc(draft.descritorUsado)}" placeholder="Ex.: D01, D05, habilidade do Currículo Municipal...">
           ${helpText(errors.descritorUsado)}
         </label>
         ${fieldSelect("alternativaCorreta", "Alternativa Correta", draft.alternativaCorreta, habilidadeAlternatives, errors.alternativaCorreta, "Selecione")}
@@ -855,7 +856,7 @@ function compareView() {
   return `
     ${filtersHtml()}
     <section class="card">
-      <h3>Comparacao entre avaliacoes</h3>
+      <h3>Comparação entre avaliacoes</h3>
       <p class="muted">Selecione uma ou mais avaliacoes no filtro Avaliacao. A tabela cria uma coluna para cada avaliacao marcada, permitindo comparar a mesma unidade em momentos diferentes.</p>
       <canvas id="compareChart"></canvas>
       ${comparisonTable(comparison)}
@@ -879,7 +880,7 @@ function importView() {
         <div id="previewArea"></div>
       </div>
       <div class="card">
-        <h3>Logs de importacao</h3>
+        <h3>Logs de importação</h3>
         <div class="table-wrap"><table><thead><tr><th>Arquivo</th><th>Total</th><th>Novos</th><th>Atualizados</th><th>Data</th><th>Acoes</th></tr></thead><tbody>
           ${state.imports.length ? state.imports.map((i) => `<tr><td>${esc(i.nomeArquivo)}</td><td>${i.quantidadeRegistros}</td><td>${i.novosRegistros ?? i.quantidadeRegistros}</td><td>${i.registrosAtualizados ?? 0}</td><td>${date(i.criadaEm)}</td><td><button class="danger" data-delete-import="${i.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='6'>Nenhuma importacao registrada.</td></tr>"}
         </tbody></table></div>
@@ -932,12 +933,12 @@ function permissionsHtml() {
   const data = state.adminPermissions?.permissions || {};
   const labels = {
     dashboard: "Dashboard",
-    analise: "Analise diagnostica",
+    analise: "Análise diagnóstica",
     bncc: "Habilidades BNCC",
     habilidadesAplicadas: "Cadastro de habilidades",
     admin: "Painel administrativo",
-    importacoes: "Importacoes",
-    relatorios: "Relatorios",
+    importacoes: "Importações",
+    relatorios: "Relatórios",
     qualidade: "Qualidade dos dados",
     comparativo: "Comparativo",
   };
@@ -998,10 +999,10 @@ function validateHabilidadeDraft() {
   const draft = habilidadeDraft();
   const errors = {};
   const required = {
-    avaliacao: "Selecione a avaliacao.",
+    avaliacao: "Selecione a avaliação.",
     ano: "Selecione o ano.",
     disciplina: "Selecione a disciplina.",
-    questao: "Selecione a questao.",
+    questao: "Selecione a questão.",
     objetoConhecimento: "Informe o objeto do conhecimento.",
     descritorUsado: "Informe o descritor usado.",
     alternativaCorreta: "Selecione a alternativa correta.",
@@ -1012,7 +1013,7 @@ function validateHabilidadeDraft() {
   const limit = habilidadeQuestionLimit(draft.ano);
   const question = Number(draft.questao);
   if (draft.ano && (!Number.isInteger(question) || question < 1 || question > limit)) {
-    errors.questao = `O ${draft.ano} permite ate ${limit} questoes.`;
+    errors.questao = `O ${draft.ano} permite até ${limit} questões.`;
   }
   if (draft.alternativaCorreta) {
     for (const alternative of habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta)) {
@@ -1028,7 +1029,7 @@ function validateHabilidadeDraft() {
 function tableHtml(rows) {
   if (!rows.length) return "";
   return `<div class="table-wrap"><table><thead><tr>
-    <th>Unidade</th><th>Turma</th><th>Ano</th><th>Disciplina</th><th>Nivel</th><th>Inclusao</th><th>Alunos</th><th>Acertos</th><th>Pontos possiveis</th><th>%</th>
+    <th>Unidade</th><th>Turma</th><th>Ano</th><th>Disciplina</th><th>Nivel</th><th>Inclusao</th><th>Alunos</th><th>Acertos</th><th>Pontos possíveis</th><th>%</th>
   </tr></thead><tbody>
     ${rows.map((r) => `<tr><td>${esc(r.unidade)}</td><td>${esc(r.turma)}</td><td>${esc(r.ano)}</td><td>${esc(r.disciplina)}</td><td>${levelBadge(r.nivel)}</td><td>${esc(r.inclusao)}</td><td>${r.alunos}</td><td>${r.acertos}</td><td>${r.pontosPossiveis}</td><td><strong>${r.percentual}%</strong></td></tr>`).join("")}
   </tbody></table></div>`;
@@ -1333,7 +1334,7 @@ async function loadCurrent() {
 async function loadCurriculoMunicipal() {
   if (!state.curriculoMunicipalData) {
     const response = await fetch(assetPath("curriculo-municipal-data.json"));
-    if (!response.ok) throw new Error("Falha ao carregar o Curriculo Municipal.");
+    if (!response.ok) throw new Error("Falha ao carregar o Currículo Municipal.");
     state.curriculoMunicipalData = await response.json();
   }
 }
@@ -1364,7 +1365,7 @@ async function loadReports() {
   }
   const recordsPayload = await api(`/records?limit=500&${qs}`);
   state.rows = recordsPayload.rows;
-  if (state.reportMode === "estatistica") state.statistics = await api(`/statistics?${qs}`);
+  if (state.reportMode === "estatística") state.statistics = await api(`/statistics?${qs}`);
 }
 
 async function loadCompare() {
@@ -1432,7 +1433,7 @@ async function deleteImport(id) {
   const ok = confirm(`Excluir a importacao "${item?.nomeArquivo || id}"?\n\nOs registros vinculados a essa importacao serao removidos da base e os totais serao recalculados.`);
   if (!ok) return;
   const result = await api(`/imports/${id}`, { method: "DELETE" });
-  state.message = `Importacao excluida. Registros removidos: ${result.registrosRemovidos}.`;
+  state.message = `Importação excluída. Registros removidos: ${result.registrosRemovidos}.`;
   state.filters = {};
   await loadImports();
   if (result?.kpis) state.importStats = result.kpis;
@@ -1566,16 +1567,16 @@ async function previewImport(event) {
 function renderImportPreview(result, activeTab) {
   const notifications = importNotifications(result);
   const tabs = [
-    ["schema", "ConfiguraÃ§Ã£o", notifications.schema.length],
-    ["validation", "ValidaÃ§Ã£o", notifications.validation.length],
+    ["schema", "Configuração", notifications.schema.length],
+    ["validation", "Validação", notifications.validation.length],
     ["duplicates", "Duplicidades", notifications.duplicates.length],
     ["columns", "Colunas", result.headers.length],
     ["sample", "Amostra", result.sample.length],
   ];
   document.querySelector("#previewArea").innerHTML = `
     <div class="notice ${notifications.schema.some((n) => n.severity === "erro" || n.severity === "alerta") ? "error" : ""}">
-      Arquivo conferido: ${result.totalRows} registros. Alertas de configuraÃ§Ã£o: ${notifications.schema.length}. Alertas de validaÃ§Ã£o: ${notifications.validation.length}.
-      ${result.ignoredColumnsAfterRaca?.length ? `<br>Colunas ignoradas apÃ³s RAÃ‡A: ${result.ignoredColumnsAfterRaca.length}.` : ""}
+      Arquivo conferido: ${result.totalRows} registros. Alertas de configuração: ${notifications.schema.length}. Alertas de validação: ${notifications.validation.length}.
+      ${result.ignoredColumnsAfterRaca?.length ? `<br>Colunas ignoradas após RAÇA: ${result.ignoredColumnsAfterRaca.length}.` : ""}
     </div>
     <div class="preview-actions">
       ${tabs.map(([key, label, count]) => `<button data-preview-tab="${key}" class="${activeTab === key ? "active" : ""}">${label}<span>${count}</span></button>`).join("")}
@@ -1592,7 +1593,7 @@ function renderImportPreview(result, activeTab) {
     try {
       const committed = await api("/imports/commit", { method: "POST", body: { previewId: result.previewId, force: false } });
       stopProgress(100);
-      state.message = "IMPORTAÃ‡ÃƒO DE DADOS EFETIVADA";
+      state.message = "IMPORTAÇÃO DE DADOS EFETIVADA";
       state.filters = {};
       await loadImports();
       if (committed?.kpis) state.importStats = committed.kpis;
@@ -1611,7 +1612,7 @@ function renderImportPreview(result, activeTab) {
 function progressHtml(value) {
   return `
     <div class="import-progress">
-      <div class="progress-title">ANÃLISE DOS DADOS EM ANDAMENTO</div>
+      <div class="progress-title">ANÁLISE DOS DADOS EM ANDAMENTO</div>
       <div class="progress-track"><div id="importProgressBar" class="progress-bar" style="width: ${value}%"></div></div>
       <div id="importProgressValue" class="progress-value">${value}%</div>
     </div>`;
@@ -1662,10 +1663,10 @@ function previewTable(activeTab, result, notifications) {
     return simpleTable(headers, result.sample.slice(0, 12).map((row) => headers.map((header) => row[header] ?? "")));
   }
   const rows = notifications[activeTab] || [];
-  if (!rows.length) return `<div class="empty-box">Nenhuma notificaÃ§Ã£o para esta conferÃªncia.</div>`;
-  return simpleTable(["Severidade", "Categoria", "Linha", "Campo", "Mensagem"], rows.map((item) => [
+  if (!rows.length) return `<div class="empty-box">Nenhuma notificação para esta conferência.</div>`;
+  return simpleTable(["Severidade", "Catégoria", "Linha", "Campo", "Mensagem"], rows.map((item) => [
     item.severity || "info",
-    item.category || "ValidaÃ§Ã£o",
+    item.category || "Validação",
     item.row ?? "-",
     item.column || "-",
     item.message || "",
@@ -1692,7 +1693,8 @@ async function api(url, options = {}) {
   try {
     return await window.AVD_DB_REQUEST(options.method || "GET", url, options.body || options.form, { token: state.token, auth: options.auth !== false });
   } catch (error) {
-    throw new Error(error?.error || error?.message || "Falha na requisicao.");
+    const message = error?.error || error?.message || "Falha na requisicao.";
+    throw new Error(error?.detail ? `${message} ${error.detail}` : message);
   }
 }
 
@@ -1781,8 +1783,8 @@ function drawBars(id, data, key, options = {}) {
       ctx.fillStyle = active ? color : "#344054";
       ctx.font = active ? "bold 11px Segoe UI" : "11px Segoe UI";
       ctx.save();
-      ctx.translate(x + bw / 2, cssH - padB + 15);
-      ctx.rotate(-0.55);
+      ctx.translaté(x + bw / 2, cssH - padB + 15);
+      ctx.rotaté(-0.55);
       ctx.textAlign = "right";
       ctx.fillText(String(d.label).slice(0, options.compact ? 8 : 18), 0, 0);
       ctx.restore();
@@ -1999,7 +2001,7 @@ async function download(url, filename) {
     const result = await api(url);
     blob = result instanceof Blob ? result : new Blob([String(result ?? "")]);
   } catch {
-    state.error = "Nao foi possivel gerar o arquivo.";
+    state.error = "Não foi possível gerar o arquivo.";
     render();
     return;
   }
@@ -2047,7 +2049,7 @@ function alertHtml() {
 }
 
 function titleFor(view) {
-  return ({ dashboard: "Dashboard geral", analise: "Analise diagnostica", analiseQuestoes: "Analise Diagnostica das Questoes", bncc: "Habilidades BNCC", curriculoMunicipal: "Curriculo Municipal", habilidadesAplicadas: "Cadastro de Habilidades Aplicadas", relatorios: "Relatorios", qualidade: "Qualidade dos dados", comparativo: "Comparativo", importacoes: "Importacoes", admin: "Painel administrativo" })[view] || "AVD";
+  return ({ dashboard: "Dashboard geral", analise: "Análise diagnóstica", analiseQuestoes: "Analise Diagnostica das Questoes", bncc: "Habilidades BNCC", curriculoMunicipal: "Currículo Municipal", habilidadesAplicadas: "Cadastro de Habilidades Aplicadas", relatorios: "Relatórios", qualidade: "Qualidade dos dados", comparativo: "Comparativo", importacoes: "Importações", admin: "Painel administrativo" })[view] || "AVD";
 }
 
 function esc(value) {
