@@ -113,8 +113,8 @@ function loginView() {
         <p>Consulta, análise e relatórios diagnósticos por perfil de acesso.</p>
         ${alertHtml()}
         <form id="loginForm">
-          <label>E-mail <input name="email" type="email" required autocomplete="username" value="admin@semed.local"></label>
-          <label>Senha <input name="password" type="password" required autocomplete="current-password" value="Admin@123"></label>
+          <label>E-mail <input name="email" type="email" required autocomplete="username" placeholder="Digite seu e-mail"></label>
+          <label>Senha <input name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha"></label>
           <button class="primary" type="submit">Entrar</button>
         </form>
       </div>
