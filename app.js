@@ -40,6 +40,7 @@ const state = {
 const app = document.querySelector("#app");
 const apiCache = new Map();
 let currentLoadId = 0;
+let pendingLoadTimer = null;
 const filterOrder = ["avaliacao", "unidade", "ano", "turma", "disciplina", "aluno", "nivel", "raca", "inclusao"];
 const questionAnalysisFilterOrder = ["avaliacao", "ano", "disciplina", "questao"];
 const questionAnalysisFilterLabels = {
@@ -1229,8 +1230,10 @@ async function handleQuestionFilterChange(event) {
 
 function scheduleLoadCurrent() {
   const loadId = ++currentLoadId;
+  if (pendingLoadTimer) clearTimeout(pendingLoadTimer);
   return new Promise((resolve) => {
-    setTimeout(async () => {
+    pendingLoadTimer = setTimeout(async () => {
+      pendingLoadTimer = null;
       if (loadId !== currentLoadId) return resolve();
       await loadCurrent(loadId);
       resolve();
@@ -1334,7 +1337,6 @@ async function loadCurrent(loadId = ++currentLoadId) {
   } catch (error) {
     state.error = error.message;
   } finally {
-    if (loadId !== currentLoadId) return;
     state.loading = false;
     render();
   }
