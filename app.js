@@ -1391,14 +1391,13 @@ async function loadCompare() {
 
 async function loadDashboard() {
   const qs = query();
-  const [optionsPayload, dashboardPayload, recordsPayload] = await Promise.all([
+  const [optionsPayload, dashboardPayload] = await Promise.all([
     api(`/options?${qs}`),
     api(`/dashboard?${qs}`),
-    api(`/records?limit=500&${qs}`),
   ]);
   applyOptionsPayload(optionsPayload);
   state.dashboard = dashboardPayload;
-  state.rows = recordsPayload.rows;
+  state.rows = [];
 }
 
 async function loadQuality() {
