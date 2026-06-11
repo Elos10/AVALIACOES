@@ -146,7 +146,7 @@ function shell() {
           <span>${state.user.unidadeEscolar || ""}</span>
         </div>
         <nav class="nav">
-          ${nav.map(([key, label, , child]) => `<button data-view="${key}" class="${state.view === key ? "active" : ""} ${child ? "nav-child" : ""}">${label}</button>`).join("")}
+          ${nav.map(([key, label]) => `<button data-view="${key}" class="${state.view === key ? "active" : ""}">${label}</button>`).join("")}
           <button id="logout">Sair</button>
         </nav>
         <div class="sidebar-logo"><img src="${assetPath("logo-detic.png")}" alt="DETIC"></div>

@@ -135,13 +135,6 @@ label {
   background: rgba(255,255,255,.16);
   color: #ffffff;
 }
-.nav button.nav-child {
-  margin-left: .85rem;
-  padding-left: 1rem;
-  border-left: 2px solid rgba(255,255,255,.22);
-  color: #d8e5ff;
-  font-size: .92rem;
-}
 .sidebar-logo {
   margin-top: auto;
   padding: 1rem 0 0;
