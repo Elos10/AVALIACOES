@@ -241,8 +241,8 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
 }
 .permissions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: .8rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
 }
 .permission-card {
   border: 1px solid var(--line);
@@ -255,45 +255,67 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   align-items: center;
   justify-content: space-between;
   gap: .75rem;
-  padding: .75rem .85rem;
-  background: var(--brand-soft);
+  padding: .85rem 1rem;
+  background: linear-gradient(180deg, #eef4ff, #ffffff);
   color: #233b76;
+  border-bottom: 1px solid var(--line);
 }
 .permission-card header strong {
   font-size: .88rem;
 }
-.permission-card header span {
+.permission-card header small {
+  display: block;
+  margin-top: .2rem;
   color: var(--muted);
+  font-size: .74rem;
+  font-weight: 500;
+}
+.permission-card header span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 72px;
+  padding: .25rem .45rem;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: var(--brand);
   font-size: .76rem;
+  font-weight: 800;
   white-space: nowrap;
 }
 .permission-list {
   display: grid;
-  gap: .15rem;
-  padding: .55rem;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: .35rem;
+  padding: .75rem;
 }
 .permission-row {
   display: flex;
   grid-template-columns: none;
   align-items: center;
+  justify-content: flex-start;
   gap: .55rem;
-  min-height: 36px;
-  padding: .45rem .5rem;
-  border-radius: 6px;
+  min-height: 38px;
+  padding: .45rem .55rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
   color: var(--text);
   cursor: pointer;
 }
 .permission-row:hover {
   background: var(--brand-soft);
+  border-color: #c9d7ff;
 }
 .permission-row input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   flex: 0 0 auto;
   accent-color: var(--brand);
 }
 .permission-row span {
   line-height: 1.2;
+  font-weight: 600;
 }
 .subnav {
   display: flex;

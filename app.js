@@ -128,7 +128,7 @@ function shell() {
   const nav = [
     ["dashboard", "Dashboard", "dashboard"],
     ["bncc", "Habilidades BNCC", "bncc"],
-    ["curriculoMunicipal", "Currículo Municipal", "bncc"],
+    ["curriculoMunicipal", "Currículo Municipal", "curriculoMunicipal"],
     ["habilidadesAplicadas", "Cadastro de Habilidades Aplicadas", "habilidadesAplicadas"],
     ["relatorios", "Relatórios", "relatorios"],
     ["qualidade", "Qualidade dos dados", "qualidade"],
@@ -933,6 +933,7 @@ function permissionsHtml() {
     dashboard: "Dashboard",
     analise: "Análise diagnóstica",
     bncc: "Habilidades BNCC",
+    curriculoMunicipal: "Currículo Municipal",
     habilidadesAplicadas: "Cadastro de habilidades",
     admin: "Painel administrativo",
     importacoes: "Importações",
@@ -940,11 +941,17 @@ function permissionsHtml() {
     qualidade: "Qualidade dos dados",
     comparativo: "Comparativo",
   };
-  return `<div class="permissions-grid">${roles.map((role) => `
+  return `<div class="permissions-grid">${roles.map((role) => {
+    const activeCount = (state.adminPermissions?.screens || []).filter((screen) => data[role]?.[screen] !== false).length;
+    const totalCount = (state.adminPermissions?.screens || []).length;
+    return `
     <section class="permission-card">
       <header>
-        <strong>${esc(role)}</strong>
-        <span>${(state.adminPermissions?.screens || []).filter((screen) => data[role]?.[screen] !== false).length} telas ativas</span>
+        <div>
+          <strong>${esc(role)}</strong>
+          <small>Controle de telas visíveis para este perfil</small>
+        </div>
+        <span>${activeCount}/${totalCount} ativas</span>
       </header>
       <div class="permission-list">
         ${(state.adminPermissions?.screens || []).map((screen) => `
@@ -953,7 +960,8 @@ function permissionsHtml() {
             <span>${esc(labels[screen] || screen)}</span>
           </label>`).join("")}
       </div>
-    </section>`).join("")}</div>`;
+    </section>`;
+  }).join("")}</div>`;
 }
 
 function usersTable() {

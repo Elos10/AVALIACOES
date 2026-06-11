@@ -26,7 +26,7 @@ const roles = {
   GESTOR_SEMED: 'GESTOR SEMED',
   GESTOR_UNIDADE: 'GESTOR UNIDADE',
 };
-const screens = ['dashboard', 'analise', 'bncc', 'habilidadesAplicadas', 'admin', 'importacoes', 'relatorios', 'qualidade', 'comparativo'];
+const screens = ['dashboard', 'analise', 'bncc', 'curriculoMunicipal', 'habilidadesAplicadas', 'admin', 'importacoes', 'relatorios', 'qualidade', 'comparativo'];
 const filterMap = {
   avaliacao: 'AVALIACAO',
   unidade: 'UNIDADE',
@@ -338,8 +338,9 @@ function canSee(db, user, screen) {
 
 function recordsForUser(db, user) {
   if (user.perfil === roles.GESTOR_UNIDADE) {
-    const email = normalizeEmail(user.email);
-    return db.records.filter((row) => normalizeEmail(row.EMAIL) === email);
+    const userUnit = normalizedComparable(user.unidadeEscolar);
+    if (!userUnit) return [];
+    return db.records.filter((row) => normalizedComparable(row.UNIDADE) === userUnit);
   }
   return db.records || [];
 }
