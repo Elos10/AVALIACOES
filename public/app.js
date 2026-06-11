@@ -895,7 +895,7 @@ function adminView() {
   const submitLabel = editingUser ? "Salvar alteracoes" : "Cadastrar usuario";
   const passwordAttrs = editingUser ? 'placeholder="Preencha apenas se desejar alterar"' : "required";
   return `
-    <section class="admin-grid">
+    <section class="admin-stack">
       <div class="card">
         <h3>Usuarios</h3>
         <form id="userForm" class="form-grid">
@@ -919,7 +919,7 @@ function adminView() {
       <div class="card">
         <h3>Permissoes de telas</h3>
         <div id="permissionsBox">${permissionsHtml()}</div>
-        <div class="toolbar"><button class="primary" id="savePermissions">Salvar permissoes</button></div>
+        <div class="toolbar permission-actions"><button class="primary" id="savePermissions">Salvar permissoes</button></div>
       </div>
       <div class="card">
         <h3>Auditoria</h3>

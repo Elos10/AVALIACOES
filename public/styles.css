@@ -112,7 +112,10 @@ label {
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
 }
 .brand {
   display: grid;
@@ -144,7 +147,12 @@ label {
   font-size: .86rem;
   overflow-wrap: anywhere;
 }
-.nav { display: grid; gap: .35rem; }
+.nav {
+  display: grid;
+  gap: .35rem;
+  overflow-y: auto;
+  padding-right: .15rem;
+}
 .nav button {
   background: transparent;
   color: #e4edff;
@@ -157,10 +165,11 @@ label {
 }
 .sidebar-logo {
   margin-top: auto;
-  padding: 1rem 0 0;
+  padding: .9rem 0 0;
   display: flex;
   justify-content: center;
   align-items: flex-end;
+  flex: 0 0 auto;
 }
 .sidebar-logo img {
   width: 128px;
@@ -188,7 +197,7 @@ label {
   border-color: #002f8f;
   color: #ffffff;
 }
-.filters, .grid, .admin-grid, .kpis {
+.filters, .grid, .admin-grid, .admin-stack, .kpis {
   display: grid;
   gap: .75rem;
 }
@@ -373,6 +382,17 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   font-size: 1.2rem;
 }
 .admin-grid { grid-template-columns: 1.2fr .8fr; align-items: start; }
+.admin-stack {
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+.admin-stack > .card {
+  width: 100%;
+}
+.permission-actions {
+  margin-top: .8rem;
+  justify-content: flex-end;
+}
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; }
 .muted { color: var(--muted); }
 .badge { display: inline-block; padding: .2rem .45rem; border-radius: 999px; background: var(--brand-soft); color: #233b76; font-size: .75rem; }
@@ -880,7 +900,7 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: static; }
   .nav { grid-template-columns: repeat(2, 1fr); }
-  .filters, .kpis, .charts, .admin-grid, .form-grid, .analysis-grid, .bncc-grid, .bncc-shortcuts, .preview-actions, .import-summary, .diagnostic-buttons, .habilidade-form, .distractor-grid, .answer-distribution, .immersion-summary, .immersion-visual-grid, .immersion-grid { grid-template-columns: 1fr; }
+  .filters, .kpis, .charts, .admin-grid, .admin-stack, .form-grid, .analysis-grid, .bncc-grid, .bncc-shortcuts, .preview-actions, .import-summary, .diagnostic-buttons, .habilidade-form, .distractor-grid, .answer-distribution, .immersion-summary, .immersion-visual-grid, .immersion-grid { grid-template-columns: 1fr; }
   .bncc-header { align-items: flex-start; flex-direction: column; }
   .question-analysis-card header { flex-direction: column; }
   .immersion-header { flex-direction: column; }
