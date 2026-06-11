@@ -139,7 +139,11 @@ function shell() {
   return `
     <section class="shell">
       <aside class="sidebar">
-        <div class="brand">AVD</div>
+        <div class="brand">
+          <strong>AVALIAÇÃO DIAGNÓSTICA</strong>
+          <span>Secretaria de Educação de Uberaba</span>
+          <small>Diretoria de Ensino</small>
+        </div>
         <div class="user-box">
           <strong>${state.user.perfil}</strong><br>
           ${state.user.email}<br>
@@ -1037,7 +1041,7 @@ function tableHtml(rows) {
   return `<div class="table-wrap"><table><thead><tr>
     <th>Unidade</th><th>Turma</th><th>Ano</th><th>Disciplina</th><th>Nivel</th><th>Inclusao</th><th>Alunos</th><th>Acertos</th><th>Pontos possíveis</th><th>%</th>
   </tr></thead><tbody>
-    ${rows.map((r) => `<tr><td>${esc(r.unidade)}</td><td>${esc(r.turma)}</td><td>${esc(r.ano)}</td><td>${esc(r.disciplina)}</td><td>${levelBadge(r.nivel)}</td><td>${esc(r.inclusao)}</td><td>${r.alunos}</td><td>${r.acertos}</td><td>${r.pontosPossiveis}</td><td><strong>${r.percentual}%</strong></td></tr>`).join("")}
+    ${rows.map((r) => `<tr><td>${esc(r.unidade)}</td><td>${esc(r.turma)}</td><td>${esc(r.ano)}</td><td>${esc(r.disciplina)}</td><td>${levelBadge(r.nivel)}</td><td>${esc(r.inclusao)}</td><td>${r.alunos}</td><td>${r.acertos ?? r.pontos ?? 0}</td><td>${r.pontosPossiveis}</td><td><strong>${r.percentual}%</strong></td></tr>`).join("")}
   </tbody></table></div>`;
 }
 

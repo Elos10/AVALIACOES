@@ -457,9 +457,10 @@ function tableRows(records, limit = 500) {
   const groups = new Map();
   for (const row of records) {
     const key = [row.UNIDADE, row.TURMA, row.ANO, row.DISCIPLINA, row.NIVEL].join('|');
-    const item = groups.get(key) || { unidade: row.UNIDADE, turma: row.TURMA, ano: row.ANO, disciplina: row.DISCIPLINA, nivel: row.NIVEL, alunos: 0, pontos: 0, pontosPossiveis: 0, percentual: 0 };
+    const item = groups.get(key) || { unidade: row.UNIDADE, turma: row.TURMA, ano: row.ANO, disciplina: row.DISCIPLINA, nivel: row.NIVEL, inclusao: row.INCLUSÃO, alunos: 0, pontos: 0, acertos: 0, pontosPossiveis: 0, percentual: 0 };
     item.alunos += 1;
     item.pontos += Number(row.PONTOS || 0);
+    item.acertos = item.pontos;
     item.pontosPossiveis += Number(row['PONTOS POSSIVEIS'] || 0);
     item.percentual = item.pontosPossiveis ? round((item.pontos / item.pontosPossiveis) * 100) : 0;
     groups.set(key, item);

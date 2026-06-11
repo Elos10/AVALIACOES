@@ -114,7 +114,27 @@ label {
   flex-direction: column;
   min-height: 100vh;
 }
-.brand { font-weight: 800; letter-spacing: .03em; margin-bottom: 1rem; }
+.brand {
+  display: grid;
+  gap: .18rem;
+  margin-bottom: 1rem;
+  line-height: 1.15;
+}
+.brand strong {
+  font-size: .98rem;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+.brand span {
+  color: #e4edff;
+  font-size: .82rem;
+  font-weight: 700;
+}
+.brand small {
+  color: #c9d7ff;
+  font-size: .76rem;
+  font-weight: 600;
+}
 .user-box {
   border-top: 1px solid rgba(255,255,255,.14);
   border-bottom: 1px solid rgba(255,255,255,.14);
