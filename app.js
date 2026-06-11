@@ -110,16 +110,30 @@ function render() {
 function loginView() {
   return `
     <section class="login">
-      <div class="login-panel">
-        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
-        <h1>AVD Diagnóstico Escolar</h1>
-        <p>Consulta, análise e relatórios diagnósticos por perfil de acesso.</p>
-        ${alertHtml()}
-        <form id="loginForm">
-          <label>E-mail <input name="email" type="email" required autocomplete="username" placeholder="Digite seu e-mail"></label>
-          <label>Senha <input name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha"></label>
-          <button class="primary" type="submit">Entrar</button>
-        </form>
+      <div class="login-card">
+        <div class="login-intro">
+          <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
+          <span class="login-kicker">Secretaria de Educação de Uberaba</span>
+          <h1>AVALIAÇÃO DIAGNÓSTICA</h1>
+          <p>Consulta, análise e relatórios diagnósticos por perfil de acesso, unidade escolar, turma, ano, disciplina e nível de desempenho.</p>
+          <div class="login-meta">
+            <span>Diretoria de Ensino</span>
+            <span>Departamento de Educação Tecnológica</span>
+          </div>
+        </div>
+        <div class="login-forms">
+          <div class="login-form-head">
+            <span class="badge">Acesso restrito</span>
+            <h2>Entrar no sistema</h2>
+            <p>Informe seu e-mail e senha para validar o perfil de acesso.</p>
+          </div>
+          ${alertHtml()}
+          <form id="loginForm">
+            <label>E-mail <input name="email" type="email" required autocomplete="username" placeholder="Digite seu e-mail"></label>
+            <label>Senha <input name="password" type="password" required autocomplete="current-password" placeholder="Digite sua senha"></label>
+            <button class="primary" type="submit">Entrar</button>
+          </form>
+        </div>
       </div>
     </section>`;
 }
