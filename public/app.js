@@ -128,7 +128,7 @@ function shell() {
   const nav = [
     ["dashboard", "Dashboard", "dashboard"],
     ["bncc", "Habilidades BNCC", "bncc"],
-    ["curriculoMunicipal", "Currículo Municipal", "bncc", true],
+    ["curriculoMunicipal", "Currículo Municipal", "bncc"],
     ["habilidadesAplicadas", "Cadastro de Habilidades Aplicadas", "habilidadesAplicadas"],
     ["relatorios", "Relatórios", "relatorios"],
     ["qualidade", "Qualidade dos dados", "qualidade"],
