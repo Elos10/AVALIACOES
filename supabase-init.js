@@ -614,6 +614,15 @@ function questionFilterMatch(actual, expected) {
   return values.some((value) => Number(String(value || '').replace(/\D/g, '')) === actualNumber);
 }
 
+function habilidadeKey(item = {}) {
+  return [
+    normalizedComparable(item.avaliacao),
+    normalizedComparable(item.ano),
+    normalizedComparable(item.disciplina),
+    Number(item.questao || 0),
+  ].join('|');
+}
+
 function canonicalHeader(header) {
   const normalized = normalizeHeader(header);
   const aliases = {
@@ -887,10 +896,31 @@ async function request(method, path, data = undefined, options = {}) {
   if (method === 'GET' && route === 'habilidades-aplicadas') return db.habilidadesAplicadas || [];
   if (method === 'POST' && route === 'habilidades-aplicadas') {
     const item = { id: id('hab_'), ...(data || {}), questao: Number(data?.questao || 0), criadoPor: user.email, criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() };
+    const duplicate = (db.habilidadesAplicadas || []).find((entry) => habilidadeKey(entry) === habilidadeKey(item));
+    if (duplicate) throw { status: 409, error: 'Cadastro duplicado.', detail: 'Já existe habilidade cadastrada para esta Avaliação, Ano, Disciplina e Questão.' };
     db.habilidadesAplicadas.unshift(item);
     log(db, user, 'CADASTROU_HABILIDADE_APLICADA', { id: item.id });
     await writeDb(db);
     return item;
+  }
+  if (method === 'PUT' && p[0] === 'habilidades-aplicadas' && p[1]) {
+    const item = (db.habilidadesAplicadas || []).find((entry) => entry.id === p[1]);
+    if (!item) throw { status: 404, error: 'Habilidade aplicada não encontrada.' };
+    const next = { ...item, ...(data || {}), questao: Number(data?.questao || item.questao || 0), atualizadoEm: new Date().toISOString() };
+    const duplicate = (db.habilidadesAplicadas || []).find((entry) => entry.id !== item.id && habilidadeKey(entry) === habilidadeKey(next));
+    if (duplicate) throw { status: 409, error: 'Cadastro duplicado.', detail: 'Já existe habilidade cadastrada para esta Avaliação, Ano, Disciplina e Questão.' };
+    Object.assign(item, next);
+    log(db, user, 'EDITOU_HABILIDADE_APLICADA', { id: item.id });
+    await writeDb(db);
+    return item;
+  }
+  if (method === 'DELETE' && p[0] === 'habilidades-aplicadas' && p[1]) {
+    const before = (db.habilidadesAplicadas || []).length;
+    db.habilidadesAplicadas = (db.habilidadesAplicadas || []).filter((entry) => entry.id !== p[1]);
+    if (db.habilidadesAplicadas.length === before) throw { status: 404, error: 'Habilidade aplicada não encontrada.' };
+    log(db, user, 'EXCLUIU_HABILIDADE_APLICADA', { id: p[1] });
+    await writeDb(db);
+    return { ok: true };
   }
   if (method === 'GET' && route === 'admin/users') return db.users.map(publicUser);
   if (method === 'POST' && route === 'admin/users') {

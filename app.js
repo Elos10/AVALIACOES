@@ -800,6 +800,7 @@ function habilidadesAplicadasView() {
   const errors = state.habilidadeErrors || {};
   const questionLimit = habilidadeQuestionLimit(draft.ano);
   const incorrectAlternatives = habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta);
+  const editing = Boolean(draft.id);
   return `
     <section class="card">
       <div class="bncc-header">
@@ -841,15 +842,15 @@ function habilidadesAplicadasView() {
           </div>
         </section>
         <div class="toolbar span-2">
-          <button class="primary" type="submit">Salvar cadastro</button>
-          <button type="button" id="resetHabilidadeForm">Limpar formulario</button>
+          <button class="primary" type="submit">${editing ? "Salvar alterações" : "Salvar cadastro"}</button>
+          <button type="button" id="resetHabilidadeForm">${editing ? "Cancelar edição" : "Limpar formulario"}</button>
         </div>
       </form>
     </section>
     <section class="card">
       <h3>Habilidades aplicadas cadastradas</h3>
-      <div class="table-wrap"><table><thead><tr><th>Avaliacao</th><th>Ano</th><th>Disciplina</th><th>Questao</th><th>Descritor</th><th>Alternativa</th><th>Criado em</th></tr></thead><tbody>
-        ${state.habilidadesAplicadas.length ? state.habilidadesAplicadas.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${date(item.criadoEm)}</td></tr>`).join("") : "<tr><td colspan='7'>Nenhum cadastro realizado.</td></tr>"}
+      <div class="table-wrap"><table><thead><tr><th>Avaliacao</th><th>Ano</th><th>Disciplina</th><th>Questao</th><th>Descritor</th><th>Alternativa</th><th>Criado em</th><th>Ações</th></tr></thead><tbody>
+        ${state.habilidadesAplicadas.length ? state.habilidadesAplicadas.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${date(item.criadoEm)}</td><td class="row-actions"><button data-edit-habilidade="${item.id}">Editar</button><button class="danger" data-delete-habilidade="${item.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='8'>Nenhum cadastro realizado.</td></tr>"}
       </tbody></table></div>
     </section>`;
 }
@@ -1046,8 +1047,27 @@ function validateHabilidadeDraft() {
       }
     }
   }
+  const duplicate = state.habilidadesAplicadas.find((item) => item.id !== draft.id && habilidadeDuplicateKey(item) === habilidadeDuplicateKey(draft));
+  if (duplicate && draft.avaliacao && draft.ano && draft.disciplina && draft.questao) {
+    errors.questao = "Já existe cadastro para esta Avaliação, Ano, Disciplina e Questão.";
+  }
   state.habilidadeErrors = errors;
   return errors;
+}
+
+function habilidadeDuplicateKey(item = {}) {
+  return [item.avaliacao, item.ano, item.disciplina, item.questao]
+    .map((value, index) => index === 3 ? String(Number(value || 0)) : normalizeSimple(value))
+    .join("|");
+}
+
+function normalizeSimple(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[ºª]/g, "O")
+    .replace(/[^A-Z0-9]/gi, "")
+    .toUpperCase();
 }
 
 function tableHtml(rows) {
@@ -1204,6 +1224,8 @@ function bind() {
     state.habilidadeErrors = {};
     render();
   });
+  document.querySelectorAll("[data-edit-habilidade]").forEach((button) => button.addEventListener("click", () => editHabilidadeAplicada(button.dataset.editHabilidade)));
+  document.querySelectorAll("[data-delete-habilidade]").forEach((button) => button.addEventListener("click", () => deleteHabilidadeAplicada(button.dataset.deleteHabilidade)));
   document.querySelectorAll("[data-habilidade-field]").forEach((field) => field.addEventListener("input", handleHabilidadeField));
   document.querySelectorAll("[data-distractor]").forEach((field) => field.addEventListener("input", handleDistractorField));
 }
@@ -1544,11 +1566,49 @@ async function saveHabilidadeAplicada(event) {
     ),
   };
   try {
-    await api("/habilidades-aplicadas", { method: "POST", body });
-    state.message = "Habilidade aplicada cadastrada com sucesso.";
+    if (draft.id) {
+      await api(`/habilidades-aplicadas/${draft.id}`, { method: "PUT", body });
+      state.message = "Habilidade aplicada atualizada com sucesso.";
+    } else {
+      await api("/habilidades-aplicadas", { method: "POST", body });
+      state.message = "Habilidade aplicada cadastrada com sucesso.";
+    }
     state.error = "";
     state.habilidadeDraft = {};
     state.habilidadeErrors = {};
+    await loadHabilidadesAplicadas();
+  } catch (error) {
+    state.error = error.message;
+  }
+  render();
+}
+
+function editHabilidadeAplicada(id) {
+  const item = state.habilidadesAplicadas.find((entry) => entry.id === id);
+  if (!item) return;
+  state.habilidadeDraft = {
+    ...structuredClone(item),
+    questao: String(item.questao || ""),
+    analiseDistratores: { ...(item.analiseDistratores || {}) },
+  };
+  state.habilidadeErrors = {};
+  state.message = "Cadastro carregado para edição.";
+  render();
+  document.querySelector("#habilidadeForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function deleteHabilidadeAplicada(id) {
+  const item = state.habilidadesAplicadas.find((entry) => entry.id === id);
+  const label = item ? `${item.avaliacao} / ${item.ano} / ${item.disciplina} / Q${item.questao}` : "este cadastro";
+  if (!window.confirm(`Excluir ${label}?`)) return;
+  try {
+    await api(`/habilidades-aplicadas/${id}`, { method: "DELETE" });
+    if (state.habilidadeDraft?.id === id) {
+      state.habilidadeDraft = {};
+      state.habilidadeErrors = {};
+    }
+    state.message = "Habilidade aplicada excluída.";
+    state.error = "";
     await loadHabilidadesAplicadas();
   } catch (error) {
     state.error = error.message;
