@@ -2309,8 +2309,16 @@ function isSelectedFilter(key, value) {
 
 function comparisonTable(comparison) {
   if (!comparison?.evaluations?.length) return `<div class="empty-box">Selecione pelo menos uma avaliacao para montar o comparativo.</div>`;
-  return `<div class="table-wrap"><table><thead><tr><th>Unidade</th>${comparison.evaluations.map((evaluation) => `<th>${esc(evaluation)} - %</th><th>${esc(evaluation)} - alunos</th>`).join("")}</tr></thead><tbody>
-    ${comparison.rows.map((row) => `<tr><td>${esc(row.unidade)}</td>${comparison.evaluations.map((evaluation) => `<td><strong>${row[evaluation]?.percentual ?? 0}%</strong></td><td>${row[evaluation]?.alunos ?? 0}</td>`).join("")}</tr>`).join("")}
+  const disciplines = comparison.disciplines?.length ? comparison.disciplines : ["Disciplina"];
+  const columns = comparison.evaluations.flatMap((evaluation) => disciplines.map((discipline) => ({ evaluation, discipline })));
+  return `<div class="table-wrap"><table><thead>
+    <tr><th rowspan="2">Unidade</th>${comparison.evaluations.map((evaluation) => `<th colspan="${disciplines.length * 2}">${esc(evaluation)}</th>`).join("")}</tr>
+    <tr>${columns.map(({ discipline }) => `<th>${esc(discipline)} - %</th><th>${esc(discipline)} - alunos</th>`).join("")}</tr>
+  </thead><tbody>
+    ${comparison.rows.map((row) => `<tr><td>${esc(row.unidade)}</td>${columns.map(({ evaluation, discipline }) => {
+      const data = row[evaluation]?.[discipline] || {};
+      return `<td><strong>${data.percentual ?? 0}%</strong></td><td>${data.alunos ?? 0}</td>`;
+    }).join("")}</tr>`).join("")}
   </tbody></table></div>`;
 }
 
