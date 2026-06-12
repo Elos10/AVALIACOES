@@ -564,15 +564,23 @@ function statisticalAnalysis(records) {
 
 function comparisonByEvaluation(records, evaluations = []) {
   const selected = evaluations.length ? evaluations : unique(records.map((row) => row.AVALIACAO));
+  const disciplines = unique(records.map((row) => row.DISCIPLINA));
   const units = unique(records.map((row) => row.UNIDADE));
   return {
     evaluations: selected,
+    disciplines,
     rows: units.map((unit) => {
       const row = { unidade: unit };
       for (const evaluation of selected) {
-        const scoped = records.filter((item) => item.UNIDADE === unit && item.AVALIACAO === evaluation);
-        const possiveis = sum(scoped, 'PONTOS POSSIVEIS');
-        row[evaluation] = { percentual: possiveis ? round((sum(scoped, 'PONTOS') / possiveis) * 100) : 0, alunos: scoped.length };
+        row[evaluation] = {};
+        for (const discipline of disciplines) {
+          const scoped = records.filter((item) => item.UNIDADE === unit && item.AVALIACAO === evaluation && item.DISCIPLINA === discipline);
+          const possiveis = sum(scoped, 'PONTOS POSSIVEIS');
+          row[evaluation][discipline] = {
+            percentual: possiveis ? round((sum(scoped, 'PONTOS') / possiveis) * 100) : 0,
+            alunos: scoped.length,
+          };
+        }
       }
       return row;
     }),
