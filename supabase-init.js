@@ -26,7 +26,7 @@ const roles = {
   GESTOR_SEMED: 'GESTOR SEMED',
   GESTOR_UNIDADE: 'GESTOR UNIDADE',
 };
-const screens = ['dashboard', 'analise', 'bncc', 'curriculoMunicipal', 'habilidadesAplicadas', 'admin', 'importacoes', 'relatorios', 'qualidade', 'comparativo'];
+const screens = ['dashboard', 'relatorios', 'comparativo', 'bncc', 'curriculoMunicipal', 'importacoes', 'qualidade', 'admin', 'habilidadesAplicadas', 'analise'];
 const filterMap = {
   avaliacao: 'AVALIACAO',
   unidade: 'UNIDADE',

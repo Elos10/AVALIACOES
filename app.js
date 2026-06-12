@@ -33,6 +33,7 @@ const state = {
   activeDiagnosticIndex: 0,
   optionTotal: 0,
   loading: false,
+  saving: false,
   message: "",
   error: "",
 };
@@ -102,9 +103,15 @@ async function boot() {
 
 function render() {
   app.dataset.loaded = "true";
-  app.innerHTML = state.user ? shell() : loginView();
+  app.innerHTML = `${state.user ? shell() : loginView()}${savingOverlayHtml()}`;
   bind();
   drawCharts();
+}
+
+function savingOverlayHtml() {
+  return `<div id="savingOverlay" class="saving-overlay ${state.saving ? "is-visible" : ""}" role="status" aria-live="polite">
+    <div>SALVANDO INFORMAÇÕES</div>
+  </div>`;
 }
 
 function loginView() {
@@ -141,13 +148,12 @@ function loginView() {
 function shell() {
   const nav = [
     ["dashboard", "Dashboard", "dashboard"],
+    ["relatorios", "Relatórios", "relatorios"],
+    ["comparativo", "Comparativo", "comparativo"],
     ["bncc", "Habilidades BNCC", "bncc"],
     ["curriculoMunicipal", "Currículo Municipal", "curriculoMunicipal"],
-    ["habilidadesAplicadas", "Cadastro de Habilidades Aplicadas", "habilidadesAplicadas"],
-    ["relatorios", "Relatórios", "relatorios"],
-    ["qualidade", "Qualidade dos dados", "qualidade"],
-    ["comparativo", "Comparativo", "comparativo"],
     ["importacoes", "Importações", "importacoes"],
+    ["qualidade", "Qualidade dos dados", "qualidade"],
     ["admin", "Administração", "admin"],
   ].filter(([, , permissionKey]) => state.permissions[permissionKey] !== false);
   return `
@@ -1819,6 +1825,8 @@ async function api(url, options = {}) {
   const method = options.method || "GET";
   const cacheKey = method === "GET" ? `${method}:${url}:${state.token || ""}` : "";
   if (cacheKey && apiCache.has(cacheKey)) return structuredClone(apiCache.get(cacheKey));
+  const showSaving = shouldShowSavingOverlay(method, url);
+  if (showSaving) setSavingOverlay(true);
   try {
     const result = await window.AVD_DB_REQUEST(method, url, options.body || options.form, { token: state.token, auth: options.auth !== false });
     if (cacheKey) apiCache.set(cacheKey, structuredClone(result));
@@ -1827,11 +1835,28 @@ async function api(url, options = {}) {
   } catch (error) {
     const message = error?.error || error?.message || "Falha na requisicao.";
     throw new Error(error?.detail ? `${message} ${error.detail}` : message);
+  } finally {
+    if (showSaving) setSavingOverlay(false);
   }
 }
 
 function clearApiCache() {
   apiCache.clear();
+}
+
+function shouldShowSavingOverlay(method, url) {
+  if (method === "GET") return false;
+  return ![
+    "/auth/login",
+    "/auth/logout",
+    "/imports/preview",
+  ].some((route) => url.startsWith(route));
+}
+
+function setSavingOverlay(value) {
+  state.saving = value;
+  const overlay = document.querySelector("#savingOverlay");
+  if (overlay) overlay.classList.toggle("is-visible", value);
 }
 
 function assetPath(fileName) {
