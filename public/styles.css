@@ -511,7 +511,13 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   gap: .35rem;
   text-align: left;
   align-content: start;
-  min-height: 74px;
+  min-height: 88px;
+}
+.diagnostic-buttons button small,
+.diagnostic-detail small {
+  color: var(--muted);
+  font-size: .78rem;
+  font-weight: 700;
 }
 .diagnostic-buttons button.active {
   border-color: var(--brand);

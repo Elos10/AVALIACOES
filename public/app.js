@@ -269,7 +269,7 @@ function analysisView(showFilters = true, requireFilters = false) {
           </div>
         </div>
         <section class="charts">
-          ${miniTable("Questoes prioritarias", a.questoesPrioritarias, ["label", "percentual", "avaliados"])}
+          ${miniTable("Questoes prioritarias", a.questoesPrioritarias, ["label", "disciplina", "ano", "percentual", "avaliados"])}
           ${miniTable("Turmas prioritarias", a.turmasPrioritarias, ["label", "percentual", "alunos"])}
         </section>
       ` : "<p>Carregando...</p>"}
@@ -1096,6 +1096,7 @@ function diagnosticCards(items = []) {
     ...item,
     tipo: item.tipo || item.prioridade || "Atenção",
     titulo: item.titulo || `${item.label || item.questao || "Item"}${item.percentual !== undefined ? ` - ${item.percentual}%` : ""}`,
+    meta: item.meta || [item.disciplina, item.ano].filter(Boolean).join(" | "),
     indicacao: item.indicacao || item.texto || `${item.label || item.questao || "Item"} requer acompanhamento pedagógico a partir dos resultados filtrados.`,
   }));
   const active = normalized[state.activeDiagnosticIndex] || normalized[0];
@@ -1103,10 +1104,12 @@ function diagnosticCards(items = []) {
     <button data-diagnostic-index="${index}" class="${index === state.activeDiagnosticIndex ? "active" : ""}">
       <span class="badge">${esc(item.tipo)}</span>
       <strong>${esc(item.titulo)}</strong>
+      ${item.meta ? `<small>${esc(item.meta)}</small>` : ""}
     </button>`).join("")}</div>
     ${active ? `<article class="diagnostic-item diagnostic-detail">
       <span class="badge">${esc(active.tipo)}</span>
       <strong>${esc(active.titulo)}</strong>
+      ${active.meta ? `<small>${esc(active.meta)}</small>` : ""}
       <p>${esc(active.indicacao)}</p>
     </article>` : `<div class="empty-box">Nenhum ponto prioritario encontrado.</div>`}`;
 }
@@ -1118,7 +1121,7 @@ function miniTable(title, rows, columns) {
 }
 
 function labelFor(key) {
-  return ({ label: "Item", percentual: "%", avaliados: "Avaliados", alunos: "Alunos" })[key] || key;
+  return ({ label: "Item", disciplina: "Disciplina", ano: "Ano", percentual: "%", avaliados: "Avaliados", alunos: "Alunos" })[key] || key;
 }
 
 function bind() {

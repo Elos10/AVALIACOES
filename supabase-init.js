@@ -449,8 +449,38 @@ function questionPerformance(records) {
     const pt = `PT_Q${index + 1}`;
     const avaliados = records.filter((row) => row[q] !== undefined && row[q] !== '').length;
     const acertos = sum(records, pt);
-    return { label: q, questao: q, avaliados, acertos, percentual: avaliados ? round((acertos / avaliados) * 100) : 0 };
+    const context = questionPriorityContext(records, q, pt);
+    return {
+      label: q,
+      questao: q,
+      avaliados,
+      acertos,
+      percentual: avaliados ? round((acertos / avaliados) * 100) : 0,
+      ano: context?.ano || '',
+      disciplina: context?.disciplina || '',
+      contextoPercentual: context?.percentual ?? null,
+      contextoAvaliados: context?.avaliados || 0,
+      contextoAcertos: context?.acertos || 0,
+    };
   });
+}
+
+function questionPriorityContext(records, questionField, pointField) {
+  const groups = new Map();
+  for (const row of records) {
+    if (row[questionField] === undefined || row[questionField] === '') continue;
+    const ano = row.ANO || 'Ano não informado';
+    const disciplina = row.DISCIPLINA || 'Disciplina não informada';
+    const key = `${ano}|${disciplina}`;
+    const item = groups.get(key) || { ano, disciplina, avaliados: 0, acertos: 0, percentual: 0 };
+    item.avaliados += 1;
+    item.acertos += Number(row[pointField] || 0);
+    item.percentual = item.avaliados ? round((item.acertos / item.avaliados) * 100) : 0;
+    groups.set(key, item);
+  }
+  return [...groups.values()]
+    .filter((item) => item.avaliados)
+    .sort((a, b) => a.percentual - b.percentual || b.avaliados - a.avaliados)[0] || null;
 }
 
 function tableRows(records, limit = 500) {
@@ -486,11 +516,18 @@ function diagnosticAnalysis(records) {
     ],
     pontosDeAtencao: weak.map((item) => {
       const prioridade = item.percentual < 50 ? 'Alta' : item.percentual < 70 ? 'Média' : 'Monitoramento';
+      const contextText = [item.disciplina, item.ano].filter(Boolean).join(' | ');
+      const contextDetail = contextText ? ` Prioridade localizada em ${contextText}, com ${item.contextoPercentual}% de aproveitamento no recorte.` : '';
       return {
         tipo: prioridade,
         titulo: `${item.questao} - ${item.percentual}%`,
-        indicacao: `${item.questao} apresentou ${item.percentual}% de aproveitamento, com ${item.acertos} acertos em ${item.avaliados} avaliações. Recomenda-se retomar a habilidade correspondente e observar os distratores mais frequentes.`,
+        indicacao: `${item.questao} apresentou ${item.percentual}% de aproveitamento geral, com ${item.acertos} acertos em ${item.avaliados} avaliações.${contextDetail} Recomenda-se retomar a habilidade correspondente e observar os distratores mais frequentes.`,
         label: item.questao,
+        ano: item.ano,
+        disciplina: item.disciplina,
+        contextoPercentual: item.contextoPercentual,
+        contextoAvaliados: item.contextoAvaliados,
+        contextoAcertos: item.contextoAcertos,
         percentual: item.percentual,
         avaliados: item.avaliados,
         acertos: item.acertos,
