@@ -2309,17 +2309,31 @@ function isSelectedFilter(key, value) {
 
 function comparisonTable(comparison) {
   if (!comparison?.evaluations?.length) return `<div class="empty-box">Selecione pelo menos uma avaliacao para montar o comparativo.</div>`;
-  const disciplines = comparison.disciplines?.length ? comparison.disciplines : ["Disciplina"];
-  const columns = comparison.evaluations.flatMap((evaluation) => disciplines.map((discipline) => ({ evaluation, discipline })));
+  const disciplineColumns = [
+    { key: findDisciplineKey(comparison.disciplines, "LINGUA PORTUGUESA"), label: "Língua Portuguesa" },
+    { key: findDisciplineKey(comparison.disciplines, "MATEMATICA"), label: "Matemática" },
+  ];
+  const rows = comparison.rows.flatMap((row) => comparison.evaluations.map((evaluation) => ({ row, evaluation })));
   return `<div class="table-wrap"><table><thead>
-    <tr><th rowspan="2">Unidade</th>${comparison.evaluations.map((evaluation) => `<th colspan="${disciplines.length * 2}">${esc(evaluation)}</th>`).join("")}</tr>
-    <tr>${columns.map(({ discipline }) => `<th>${esc(discipline)} - %</th><th>${esc(discipline)} - alunos</th>`).join("")}</tr>
+    <tr>
+      <th>Unidade</th>
+      <th>Avaliação selecionada</th>
+      ${disciplineColumns.map((discipline) => `<th>${discipline.label} - %</th><th>${discipline.label} - alunos</th>`).join("")}
+    </tr>
   </thead><tbody>
-    ${comparison.rows.map((row) => `<tr><td>${esc(row.unidade)}</td>${columns.map(({ evaluation, discipline }) => {
-      const data = row[evaluation]?.[discipline] || {};
-      return `<td><strong>${data.percentual ?? 0}%</strong></td><td>${data.alunos ?? 0}</td>`;
-    }).join("")}</tr>`).join("")}
+    ${rows.map(({ row, evaluation }) => `<tr>
+      <td>${esc(row.unidade)}</td>
+      <td>${esc(evaluation)}</td>
+      ${disciplineColumns.map((discipline) => {
+        const data = discipline.key ? row[evaluation]?.[discipline.key] || {} : {};
+        return `<td><strong>${data.percentual ?? 0}%</strong></td><td>${data.alunos ?? 0}</td>`;
+      }).join("")}
+    </tr>`).join("")}
   </tbody></table></div>`;
+}
+
+function findDisciplineKey(disciplines = [], target) {
+  return disciplines.find((discipline) => normalizeLevel(discipline) === target) || "";
 }
 
 function chartCard(title, id) {
