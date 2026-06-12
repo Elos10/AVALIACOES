@@ -1878,7 +1878,7 @@ function drawBars(id, data, key, options = {}) {
       ? data.slice(0, 6).map((item) => ({ label: item.label, color: colorForLevel(item.label) }))
       : options.disciplinePalette && data.some((item) => item.disciplina)
         ? [...new Map(data.filter((item) => item.disciplina).map((item) => [item.disciplina, { label: item.disciplina, color: colorForDiscipline(item.disciplina) }])).values()]
-        : [{ label: options.suffix === "%" ? "Percentual de acertos" : "Quantidade de alunos", color: options.color || "#0038a8" }];
+        : [{ label: options.suffix === "%" ? "Percentual de acertos" : "Quantidade de alunos", color: options.suffix === "%" ? "#98a2b3" : options.color || "#0038a8" }];
     drawLegend(ctx, legendItems, cssW, cssH);
     updateChartRegistry(id, { bars });
   };
