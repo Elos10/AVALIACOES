@@ -52,6 +52,7 @@ const questionAnalysisFilterLabels = {
 };
 const habilidadeYears = ["1º ANO", "2º ANO", "3º ANO", "4º ANO", "5º ANO", "6º ANO", "7º ANO", "8º ANO", "9º ANO"];
 const habilidadeDisciplines = ["Portugu\u00eas", "Matém\u00e1tica"];
+const firstYearDiscipline = "1º ANO";
 const habilidadeAlternatives = ["A", "B", "C", "D", "E"];
 const habilidadeQuestionLimits = {
   "1º ANO": 10,
@@ -827,6 +828,7 @@ function habilidadesAplicadasView() {
   const draft = habilidadeDraft();
   const errors = state.habilidadeErrors || {};
   const questionLimit = habilidadeQuestionLimit(draft.ano);
+  const disciplineOptions = habilidadeDisciplineOptions(draft.ano);
   const incorrectAlternatives = habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta);
   const editing = Boolean(draft.id);
   return `
@@ -841,7 +843,7 @@ function habilidadesAplicadasView() {
       <form id="habilidadeForm" class="habilidade-form" novalidate>
         ${fieldSelect("avaliacao", "Avaliacao", draft.avaliacao, state.habilidadeOptions.avaliacoes || [], errors.avaliacao, "Selecione a avaliacao")}
         ${fieldSelect("ano", "Ano", draft.ano, habilidadeYears, errors.ano, "Selecione o ano")}
-        ${fieldSelect("disciplina", "Disciplina", draft.disciplina, habilidadeDisciplines, errors.disciplina, "Selecione a disciplina")}
+        ${fieldSelect("disciplina", "Disciplina", draft.disciplina, disciplineOptions, errors.disciplina, "Selecione a disciplina")}
         <label class="${errors.questao ? "field-error" : ""}">Questao
           <select name="questao" data-habilidade-field="questao" required ${!draft.ano ? "disabled" : ""}>
             <option value="">${draft.ano ? "Selecione a questao" : "Selecione o ano primeiro"}</option>
@@ -1048,6 +1050,10 @@ function habilidadeQuestionLimit(year) {
   return habilidadeQuestionLimits[year] || 0;
 }
 
+function habilidadeDisciplineOptions(year) {
+  return year === "1º ANO" ? [firstYearDiscipline] : habilidadeDisciplines;
+}
+
 function validateHabilidadeDraft() {
   const draft = habilidadeDraft();
   const errors = {};
@@ -1067,6 +1073,9 @@ function validateHabilidadeDraft() {
   const question = Number(draft.questao);
   if (draft.ano && (!Number.isInteger(question) || question < 1 || question > limit)) {
     errors.questao = `O ${draft.ano} permite até ${limit} questões.`;
+  }
+  if (draft.ano && draft.disciplina && !habilidadeDisciplineOptions(draft.ano).includes(draft.disciplina)) {
+    errors.disciplina = "Selecione uma disciplina válida para o ano informado.";
   }
   if (draft.alternativaCorreta) {
     for (const alternative of habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta)) {
@@ -1265,6 +1274,9 @@ function handleHabilidadeField(event) {
   if (field === "ano") {
     const limit = habilidadeQuestionLimit(draft.ano);
     if (Number(draft.questao) > limit) draft.questao = "";
+    const options = habilidadeDisciplineOptions(draft.ano);
+    if (options.length === 1) draft.disciplina = options[0];
+    else if (!options.includes(draft.disciplina)) draft.disciplina = "";
   }
   if (field === "alternativaCorreta") {
     delete draft.analiseDistratores[draft.alternativaCorreta];
