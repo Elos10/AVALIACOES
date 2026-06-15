@@ -151,6 +151,7 @@ function shell() {
     ["comparativo", "Comparativo", "comparativo"],
     ["bncc", "Habilidades BNCC", "bncc"],
     ["curriculoMunicipal", "Currículo Municipal", "curriculoMunicipal"],
+    ["habilidadesAplicadas", "Cadastro de Habilidades", "habilidadesAplicadas"],
     ["importacoes", "Importações", "importacoes"],
     ["qualidade", "Qualidade dos dados", "qualidade"],
     ["admin", "Administração", "admin"],
