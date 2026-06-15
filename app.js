@@ -122,7 +122,6 @@ function loginView() {
           <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
           <span class="login-kicker">Secretaria de Educação de Uberaba</span>
           <h1>AVALIAÇÃO DIAGNÓSTICA</h1>
-          <p>Consulta, análise e relatórios diagnósticos por perfil de acesso, unidade escolar, turma, ano, disciplina e nível de desempenho.</p>
           <div class="login-meta">
             <span>Diretoria de Ensino</span>
             <span>Departamento de Educação Tecnológica</span>
