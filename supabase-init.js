@@ -14,6 +14,7 @@ let dbCache = null;
 let dbCacheExpiresAt = 0;
 const questionFields = Array.from({ length: 20 }, (_, index) => `Q${index + 1}`);
 const pointFields = Array.from({ length: 20 }, (_, index) => `PT_Q${index + 1}`);
+const questionLimitsByYearNumber = { 1: 10, 2: 10, 3: 10, 4: 15, 5: 15, 6: 20, 7: 20, 8: 20, 9: 20 };
 const recordColumns = [
   'id', 'importacao_id', 'duplicate_key', 'avaliacao', 'unidade', 'ano', 'turma', 'disciplina', 'nome',
   'email', 'nivel', 'raca', 'inclusao', 'pontos', 'pontos_possiveis', 'percentual_acertos',
@@ -444,7 +445,8 @@ function rankingByUnitAndDiscipline(rows) {
 }
 
 function questionPerformance(records) {
-  return Array.from({ length: 20 }, (_, index) => {
+  const limit = questionLimitForRecords(records);
+  return Array.from({ length: limit }, (_, index) => {
     const q = `Q${index + 1}`;
     const pt = `PT_Q${index + 1}`;
     const avaliados = records.filter((row) => row[q] !== undefined && row[q] !== '').length;
@@ -463,6 +465,17 @@ function questionPerformance(records) {
       contextoAcertos: context?.acertos || 0,
     };
   });
+}
+
+function questionLimitForRecords(records) {
+  const years = unique(records.map((row) => yearNumber(row.ANO))).filter(Boolean);
+  if (years.length === 1) return questionLimitsByYearNumber[years[0]] || 20;
+  return 20;
+}
+
+function yearNumber(value) {
+  const match = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/\d+/);
+  return match ? Number(match[0]) : 0;
 }
 
 function questionPriorityContext(records, questionField, pointField) {
