@@ -248,10 +248,10 @@ function dashboardStartState() {
 
 function analysisView(showFilters = true, requireFilters = false) {
   const a = state.analysis;
-  const hasFilters = hasReportFilters();
+  const hasFilters = requireFilters ? hasRequiredAnalysisFilters() : hasReportFilters();
   return `
     ${showFilters ? filtersHtml() : ""}
-    ${requireFilters && !hasFilters ? reportStartState() : `
+    ${requireFilters && !hasFilters ? requiredAnalysisStartState() : `
     <section class="card">
       <h3>Relatorio de analise diagnostica</h3>
       <p class="muted">Leitura pedagogica dos resultados filtrados, com indicacoes de prioridades para recomposicao e melhoria das notas.</p>
@@ -286,12 +286,12 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
   const data = state.questionAnalysis;
   const k = data?.kpis || {};
   const consolidatedRows = consolidatedQuestionRows(data?.rows || []);
-  const hasFilters = useReportFilters ? hasReportFilters() : hasQuestionAnalysisFilters();
+  const hasFilters = useReportFilters ? hasRequiredAnalysisFilters() : hasRequiredQuestionAnalysisFilters();
   return `
     ${showFilters ? questionAnalysisFiltersHtml() : ""}
     ${!hasFilters ? `<section class="card dashboard-start">
-      <h3>Selecione os filtros para gerar a analise</h3>
-      <p class="muted">Os resultados da Analise Diagnostica das Questoes serao exibidos somente conforme a solicitacao feita nos filtros acima.</p>
+      <h3>Informe Avaliação, Ano e Disciplina</h3>
+      <p class="muted">Para compreender corretamente as habilidades analisadas, selecione obrigatoriamente Avaliação, Ano e Disciplina. Os demais filtros continuam opcionais.</p>
     </section>` : `
     <section class="card">
       <div class="toolbar">
@@ -338,6 +338,19 @@ function hasReportFilters() {
     const value = state.filters[key];
     return Array.isArray(value) ? value.length > 0 : Boolean(value);
   });
+}
+
+function hasRequiredAnalysisFilters() {
+  return ["avaliacao", "ano", "disciplina"].every(hasFilterValue);
+}
+
+function hasRequiredQuestionAnalysisFilters() {
+  return ["avaliacao", "ano", "disciplina"].every(hasFilterValue);
+}
+
+function hasFilterValue(key) {
+  const value = state.filters[key];
+  return Array.isArray(value) ? value.length > 0 : Boolean(value);
 }
 
 function questionAnalysisFiltersHtml() {
@@ -610,13 +623,15 @@ function answerDetailHtml(row, alternative) {
 
 function reportsView() {
   const stats = state.statistics;
-  const hasFilters = hasReportFilters();
+  const hasFilters = state.reportMode === "estatistica" || state.reportMode === "estatística"
+    ? hasRequiredAnalysisFilters()
+    : hasReportFilters();
   if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${analysisView(false, true)}`;
   if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${questionAnalysisView(false, true)}`;
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
-    ${!hasFilters ? reportStartState() : state.reportMode === "estatistica" ? `
+    ${!hasFilters ? (state.reportMode === "estatistica" || state.reportMode === "estatística" ? requiredAnalysisStartState() : reportStartState()) : state.reportMode === "estatistica" ? `
       <section class="kpis">
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
         ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`)}
@@ -657,6 +672,13 @@ function reportStartState() {
   return `<section class="card dashboard-start">
     <h3>Selecione os filtros para visualizar o relatorio</h3>
     <p class="muted">As informações dos relatorios serao apresentadas somente depois da escolha dos filtros acima, mantendo o mesmo contexto para todas as abas.</p>
+  </section>`;
+}
+
+function requiredAnalysisStartState() {
+  return `<section class="card dashboard-start">
+    <h3>Informe Avaliação, Ano e Disciplina</h3>
+    <p class="muted">Para gerar Análise Estatística, Análise Diagnóstica ou Análise Diagnóstica das Questões, selecione obrigatoriamente Avaliação, Ano e Disciplina. Unidade, Turma, Aluno, Nível, Raça e Inclusão ficam opcionais.</p>
   </section>`;
 }
 
@@ -1440,6 +1462,9 @@ async function loadReports() {
   if (!hasReportFilters()) {
     return;
   }
+  if ((state.reportMode === "diagnostica" || state.reportMode === "questoes" || state.reportMode === "estatistica" || state.reportMode === "estatística") && !hasRequiredAnalysisFilters()) {
+    return;
+  }
   if (state.reportMode === "diagnostica") {
     const [analysisPayload, dashboardPayload] = await Promise.all([
       api(`/analysis?${qs}`),
@@ -1496,19 +1521,29 @@ async function loadQuality() {
 
 async function loadAnalysis() {
   const qs = query();
-  const [optionsPayload, analysisPayload, dashboardPayload] = await Promise.all([
-    api(`/options?${qs}`),
+  const optionsPayload = await api(`/options?${qs}`);
+  applyOptionsPayload(optionsPayload);
+  if (!hasRequiredAnalysisFilters()) {
+    state.analysis = null;
+    state.dashboard = null;
+    return;
+  }
+  const [analysisPayload, dashboardPayload] = await Promise.all([
     api(`/analysis?${qs}`),
     api(`/dashboard?${qs}`),
   ]);
-  applyOptionsPayload(optionsPayload);
   state.analysis = analysisPayload;
   state.dashboard = dashboardPayload;
 }
 
 async function loadQuestionAnalysis() {
   const qs = query();
-  state.questionAnalysis = await api(`/analysis/questions?${qs}`);
+  const payload = await api(`/analysis/questions?${qs}`);
+  if (!hasRequiredQuestionAnalysisFilters()) {
+    state.questionAnalysis = { ...payload, rows: [], inconsistencias: [], kpis: {} };
+    return;
+  }
+  state.questionAnalysis = payload;
 }
 
 async function loadImports() {
