@@ -27,6 +27,7 @@ const state = {
   habilidadeOptions: { avaliacoes: [] },
   habilidadeDraft: {},
   habilidadeErrors: {},
+  habilidadeListFilters: {},
   curriculoMunicipalData: null,
   curriculoMunicipalDoc: "",
   reportMode: "padrao",
@@ -831,6 +832,9 @@ function habilidadesAplicadasView() {
   const disciplineOptions = habilidadeDisciplineOptions(draft.ano);
   const incorrectAlternatives = habilidadeAlternatives.filter((item) => item !== draft.alternativaCorreta);
   const editing = Boolean(draft.id);
+  const filteredItems = filteredHabilidadesAplicadas();
+  const years = uniqueLocal(state.habilidadesAplicadas.map((item) => item.ano));
+  const disciplines = uniqueLocal(state.habilidadesAplicadas.map((item) => item.disciplina));
   return `
     <section class="card">
       <div class="bncc-header">
@@ -878,11 +882,81 @@ function habilidadesAplicadasView() {
       </form>
     </section>
     <section class="card">
-      <h3>Habilidades aplicadas cadastradas</h3>
+      <div class="bncc-header">
+        <div>
+          <h3>Habilidades aplicadas cadastradas</h3>
+          <p class="muted">Use os filtros abaixo para visualizar e imprimir apenas as habilidades do ano e da disciplina desejados.</p>
+        </div>
+        <div class="toolbar no-print">
+          <button class="primary" id="printHabilidades">Imprimir / PDF</button>
+        </div>
+      </div>
+      <div class="habilidade-list-filters no-print">
+        <label>Ano
+          <select id="habilidadeFilterAno">
+            <option value="">Todos</option>
+            ${years.map((year) => `<option value="${esc(year)}" ${state.habilidadeListFilters.ano === year ? "selected" : ""}>${esc(year)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Disciplina
+          <select id="habilidadeFilterDisciplina">
+            <option value="">Todas</option>
+            ${disciplines.map((discipline) => `<option value="${esc(discipline)}" ${state.habilidadeListFilters.disciplina === discipline ? "selected" : ""}>${esc(discipline)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
       <div class="table-wrap"><table><thead><tr><th>Avaliacao</th><th>Ano</th><th>Disciplina</th><th>Questao</th><th>Descritor</th><th>Alternativa</th><th>Criado em</th><th>Ações</th></tr></thead><tbody>
-        ${state.habilidadesAplicadas.length ? state.habilidadesAplicadas.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${date(item.criadoEm)}</td><td class="row-actions"><button data-edit-habilidade="${item.id}">Editar</button><button class="danger" data-delete-habilidade="${item.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='8'>Nenhum cadastro realizado.</td></tr>"}
+        ${filteredItems.length ? filteredItems.map((item) => `<tr><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>Q${esc(item.questao)}</td><td>${esc(item.descritorUsado)}</td><td><span class="badge">${esc(item.alternativaCorreta)}</span></td><td>${date(item.criadoEm)}</td><td class="row-actions"><button data-edit-habilidade="${item.id}">Editar</button><button class="danger" data-delete-habilidade="${item.id}">Excluir</button></td></tr>`).join("") : "<tr><td colspan='8'>Nenhum cadastro realizado para os filtros selecionados.</td></tr>"}
       </tbody></table></div>
+      ${habilidadesPrintReport(filteredItems)}
     </section>`;
+}
+
+function filteredHabilidadesAplicadas() {
+  const filters = state.habilidadeListFilters || {};
+  return [...state.habilidadesAplicadas]
+    .filter((item) => !filters.ano || item.ano === filters.ano)
+    .filter((item) => !filters.disciplina || item.disciplina === filters.disciplina)
+    .sort((a, b) => String(a.ano || "").localeCompare(String(b.ano || ""), "pt-BR", { numeric: true }) ||
+      String(a.disciplina || "").localeCompare(String(b.disciplina || ""), "pt-BR") ||
+      Number(a.questao || 0) - Number(b.questao || 0));
+}
+
+function habilidadesPrintReport(items) {
+  const filters = state.habilidadeListFilters || {};
+  const subtitle = [
+    filters.ano ? `Ano: ${filters.ano}` : "Ano: Todos",
+    filters.disciplina ? `Disciplina: ${filters.disciplina}` : "Disciplina: Todas",
+    `Total: ${items.length}`,
+  ].join(" | ");
+  return `<section id="habilidadesPrintArea" class="habilidades-print-report">
+    <header>
+      <h1>Habilidades aplicadas cadastradas</h1>
+      <p>${esc(subtitle)}</p>
+      <p>Gerado em ${date(new Date().toISOString())}</p>
+    </header>
+    ${items.length ? items.map((item) => `<article class="habilidade-print-item">
+      <div class="habilidade-print-title">
+        <strong>Q${esc(item.questao)} - ${esc(item.descritorUsado)}</strong>
+        <span>Alternativa correta: ${esc(item.alternativaCorreta)}</span>
+      </div>
+      <div class="habilidade-print-meta">
+        <span>${esc(item.avaliacao)}</span>
+        <span>${esc(item.ano)}</span>
+        <span>${esc(item.disciplina)}</span>
+      </div>
+      <p><strong>Objeto do conhecimento:</strong> ${esc(item.objetoConhecimento)}</p>
+      ${Object.entries(item.analiseDistratores || {}).length ? `<div class="habilidade-print-distractors">
+        <strong>Análise dos distratores</strong>
+        ${Object.entries(item.analiseDistratores || {}).map(([alternative, text]) => `<p><strong>${esc(alternative)}:</strong> ${esc(text)}</p>`).join("")}
+      </div>` : ""}
+    </article>`).join("") : `<div class="empty-box">Nenhuma habilidade encontrada para os filtros selecionados.</div>`}
+  </section>`;
+}
+
+function uniqueLocal(values) {
+  return [...new Set(values.filter((value) => value !== undefined && value !== null && value !== ""))]
+    .sort((a, b) => String(a).localeCompare(String(b), "pt-BR", { numeric: true }));
 }
 
 function qualityView() {
@@ -1265,6 +1339,25 @@ function bind() {
   document.querySelectorAll("[data-delete-habilidade]").forEach((button) => button.addEventListener("click", () => deleteHabilidadeAplicada(button.dataset.deleteHabilidade)));
   document.querySelectorAll("[data-habilidade-field]").forEach((field) => field.addEventListener("input", handleHabilidadeField));
   document.querySelectorAll("[data-distractor]").forEach((field) => field.addEventListener("input", handleDistractorField));
+  document.querySelector("#habilidadeFilterAno")?.addEventListener("change", (event) => {
+    state.habilidadeListFilters ||= {};
+    if (event.target.value) state.habilidadeListFilters.ano = event.target.value;
+    else delete state.habilidadeListFilters.ano;
+    render();
+  });
+  document.querySelector("#habilidadeFilterDisciplina")?.addEventListener("change", (event) => {
+    state.habilidadeListFilters ||= {};
+    if (event.target.value) state.habilidadeListFilters.disciplina = event.target.value;
+    else delete state.habilidadeListFilters.disciplina;
+    render();
+  });
+  document.querySelector("#printHabilidades")?.addEventListener("click", () => {
+    document.body.classList.add("print-habilidades");
+    const cleanup = () => document.body.classList.remove("print-habilidades");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    setTimeout(cleanup, 2000);
+  });
 }
 
 function handleHabilidadeField(event) {
