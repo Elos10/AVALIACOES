@@ -628,6 +628,22 @@ function valuesMatch(actual, expected) {
   });
 }
 
+function disciplineComparable(value) {
+  const normalized = normalizedComparable(value);
+  if (['PORTUGUES', 'LINGUAPORTUGUESA', 'LINGUAPORTUGUES', 'LP'].includes(normalized)) return 'LINGUAPORTUGUESA';
+  if (['MATEMATICA', 'MATEMATICA'].includes(normalized)) return 'MATEMATICA';
+  return normalized;
+}
+
+function disciplineValuesMatch(actual, expected) {
+  const values = Array.isArray(expected) ? expected : [expected];
+  const normalizedActual = disciplineComparable(actual);
+  return values.some((value) => {
+    if (value === undefined || value === null || value === '') return true;
+    return normalizedActual === disciplineComparable(value);
+  });
+}
+
 function questionFilterMatch(actual, expected) {
   if (!expected || (Array.isArray(expected) && !expected.length)) return true;
   const values = Array.isArray(expected) ? expected : [expected];
@@ -834,27 +850,29 @@ function questionAnalysis(db, user, filters = {}) {
   const filtered = habilidades.filter((item) => (
     valuesMatch(item.avaliacao, filters.avaliacao) &&
     valuesMatch(item.ano, filters.ano) &&
-    valuesMatch(item.disciplina, filters.disciplina) &&
+    disciplineValuesMatch(item.disciplina, filters.disciplina) &&
     questionFilterMatch(item.questao, filters.questao)
   ));
   const rows = filtered.map((item) => {
     const q = `Q${item.questao}`;
-    const recordFilters = { ...filters, avaliacao: item.avaliacao, ano: item.ano, disciplina: item.disciplina };
+    const recordFilters = { ...filters, avaliacao: item.avaliacao, ano: item.ano };
     delete recordFilters.questao;
-    const records = filteredRecords(db, user, recordFilters);
+    delete recordFilters.disciplina;
+    const records = filteredRecords(db, user, recordFilters)
+      .filter((row) => disciplineValuesMatch(row.DISCIPLINA, item.disciplina));
     const avaliados = records.filter((row) => row[q] !== undefined && row[q] !== '').length;
     const acertos = records.filter((row) => String(row[q] || '').trim().toUpperCase() === String(item.alternativaCorreta || '').toUpperCase()).length;
     const distribuicaoRespostas = Object.fromEntries(['A', 'B', 'C', 'D', 'E'].map((alt) => [alt, records.filter((row) => String(row[q] || '').trim().toUpperCase() === alt).length]));
     return { ...item, questao: q, questaoNumero: item.questao, avaliados, acertos, erros: Math.max(avaliados - acertos, 0), percentual: avaliados ? round((acertos / avaliados) * 100) : 0, distribuicaoRespostas };
   }).sort((a, b) => Number(a.questaoNumero || 0) - Number(b.questaoNumero || 0));
-  return { filters, options: questionOptions(habilidades, filters), rows, inconsistencias: [], kpis: { habilidadesCadastradas: habilidades.length, habilidadesComDados: rows.filter((row) => row.avaliados).length, totalAvaliacoesQuestao: rows.reduce((s, row) => s + row.avaliados, 0), percentualMedio: rows.length ? round(rows.reduce((s, row) => s + row.percentual, 0) / rows.length) : 0 } };
+  return { filters, options: questionOptions(habilidades, filters), rows, inconsistencias: [], kpis: { habilidadesCadastradas: filtered.length, habilidadesComDados: rows.filter((row) => row.avaliados).length, totalAvaliacoesQuestao: rows.reduce((s, row) => s + row.avaliados, 0), percentualMedio: rows.length ? round(rows.reduce((s, row) => s + row.percentual, 0) / rows.length) : 0 } };
 }
 
 function questionOptions(items, filters) {
   const scoped = items.filter((item) => (
     valuesMatch(item.avaliacao, filters.avaliacao) &&
     valuesMatch(item.ano, filters.ano) &&
-    valuesMatch(item.disciplina, filters.disciplina)
+    disciplineValuesMatch(item.disciplina, filters.disciplina)
   ));
   return { avaliacao: unique(items.map((i) => i.avaliacao)), ano: unique(scoped.map((i) => i.ano)), disciplina: unique(scoped.map((i) => i.disciplina)), questao: unique(scoped.map((i) => `Q${i.questao}`)) };
 }
