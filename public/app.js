@@ -622,19 +622,18 @@ function reportsView() {
   const hasFilters = state.reportMode === "estatistica" || state.reportMode === "estatística"
     ? hasRequiredAnalysisFilters()
     : hasReportFilters();
-  if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${reportPrintControls()}${reportPrintHeader("Análise Diagnóstica")}${analysisView(false, true)}`;
-  if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${reportPrintControls()}${reportPrintHeader("Análise Diagnóstica das Questões")}${questionAnalysisView(false, true)}`;
+  if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${reportPrintHeader("Análise Diagnóstica")}${analysisView(false, true)}`;
+  if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${reportPrintHeader("Análise Diagnóstica das Questões")}${questionAnalysisView(false, true)}`;
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
-    ${state.reportMode === "estatistica" || state.reportMode === "estatística" ? reportPrintControls() : ""}
     ${state.reportMode === "estatistica" || state.reportMode === "estatística" ? reportPrintHeader("Análise Estatística") : ""}
     ${!hasFilters ? (state.reportMode === "estatistica" || state.reportMode === "estatística" ? requiredAnalysisStartState() : reportStartState()) : state.reportMode === "estatistica" ? `
       <section class="kpis">
-        ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
-        ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`)}
-        ${kpi("Desvio padrao", `${stats?.resumo.desvioPadraoPercentual || 0}`)}
-        ${kpi("Amplitude", `${stats?.resumo.minimoPercentual || 0}% - ${stats?.resumo.maximoPercentual || 0}%`)}
+        ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`, "Soma dos percentuais de acerto dividida pela quantidade de registros considerados nos filtros.")}
+        ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`, "Valor central dos percentuais de acerto ordenados do menor para o maior.")}
+        ${kpi("Desvio padrao", `${stats?.resumo.desvioPadraoPercentual || 0}`, "Mede a dispersao dos percentuais em relacao a media. Quanto maior, mais variacao entre os resultados.")}
+        ${kpi("Amplitude", `${stats?.resumo.minimoPercentual || 0}% - ${stats?.resumo.maximoPercentual || 0}%`, "Intervalo entre o menor e o maior percentual de acerto encontrado nos filtros.")}
       </section>
       <section class="charts">
         ${chartCard("Distribuicao por nivel", "statsLevelChart")}
@@ -658,9 +657,7 @@ function reportsView() {
 }
 
 function reportPrintControls() {
-  return `<section class="card no-print report-print-controls">
-    <button id="printReportMode" class="primary" type="button">Imprimir / PDF</button>
-  </section>`;
+  return `<button id="printReportMode" class="primary report-print-button" type="button">Imprimir / PDF</button>`;
 }
 
 function reportPrintHeader(title) {
@@ -695,12 +692,14 @@ function reportFilterSummary() {
 }
 
 function reportsSubnav() {
+  const canPrint = ["estatistica", "estatística", "diagnostica", "questoes"].includes(state.reportMode);
   return `<section class="subnav">
     <button type="button" data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
     <button type="button" data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
     <button type="button" data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
     <button type="button" data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
     ${state.reportMode === "questoes" ? `<button type="button" id="questionImmersion" class="${state.showQuestionImmersion ? "active" : ""}">Imersao</button>` : ""}
+    ${canPrint ? `<span class="subnav-spacer"></span>${reportPrintControls()}` : ""}
   </section>`;
 }
 
@@ -2521,8 +2520,10 @@ function chartCard(title, id) {
   return `<section class="card chart"><h3>${title}</h3><canvas id="${id}"></canvas></section>`;
 }
 
-function kpi(label, value) {
-  return `<section class="card kpi"><div class="value">${value}</div><div class="label">${label}</div></section>`;
+function kpi(label, value, help = "") {
+  const title = help ? ` title="${esc(help)}"` : "";
+  const helpClass = help ? " has-help" : "";
+  return `<section class="card kpi"><div class="value${helpClass}"${title}>${value}</div><div class="label">${label}</div></section>`;
 }
 
 function alertHtml() {

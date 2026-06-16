@@ -325,6 +325,11 @@ label {
   box-shadow: var(--shadow);
 }
 .kpi .value { font-size: 1.8rem; font-weight: 800; color: var(--brand-2); }
+.kpi .value.has-help {
+  cursor: help;
+  text-decoration: underline dotted rgba(0, 56, 168, .35);
+  text-underline-offset: 4px;
+}
 .kpi .label { color: var(--muted); font-size: .85rem; }
 .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .chart h3, .card h3 { margin: 0 0 .75rem; font-size: 1rem; }
@@ -429,11 +434,25 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   display: flex;
   gap: .5rem;
   flex-wrap: wrap;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: .75rem;
+  box-shadow: var(--shadow);
 }
 .subnav button.active {
   background: var(--brand);
   border-color: var(--brand);
   color: white;
+}
+.subnav-spacer {
+  flex: 1 1 auto;
+  min-width: 1rem;
+}
+.subnav .report-print-button {
+  margin-left: auto;
+  min-width: 132px;
 }
 .notice { padding: .7rem .8rem; border-radius: 6px; background: #ecfdf3; color: var(--ok); border: 1px solid #abefc6; }
 .error { background: #fef3f2; color: var(--danger); border-color: #fecdca; }
