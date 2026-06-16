@@ -295,14 +295,6 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
       <h3>Informe Avaliação, Ano e Disciplina</h3>
       <p class="muted">Para compreender corretamente as habilidades analisadas, selecione obrigatoriamente Avaliação, Ano e Disciplina. Os demais filtros continuam opcionais.</p>
     </section>` : `
-    <section class="card">
-      <div class="toolbar">
-        <h3>Relatorio analitico</h3>
-        <button class="primary" id="questionAnalysisPdf">Criar Relatorio em PDF</button>
-        <button id="questionImmersion" class="${state.showQuestionImmersion ? "active" : ""}">Imersao</button>
-      </div>
-      <p class="muted">O PDF sera gerado em A4 paisagem, com fonte Arial tamanho 11, respeitando os filtros aplicados. A Imersao consolida acoes pedagogicas do Currículo Municipal a partir das questoes filtradas.</p>
-    </section>
     ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
       ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0)}
@@ -312,6 +304,7 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
     </section>
     <section class="charts">
       ${chartCard("Desempenho das questoes cadastradas", "questionDiagnosticChart")}
+      ${state.user?.perfil === "ADMINISTRADOR" ? `
       <section class="card">
         <h3>Consistencia dos cadastros</h3>
         <p class="muted">A correlacao considera Avaliacao, Ano e Disciplina iguais entre o cadastro da habilidade aplicada e a base importada.</p>
@@ -319,6 +312,7 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
           ${data.inconsistencias.map((item) => `<tr><td>${esc(item.questao)}</td><td>${esc(item.avaliacao)}</td><td>${esc(item.ano)}</td><td>${esc(item.disciplina)}</td><td>${esc(item.mensagem)}</td></tr>`).join("")}
         </tbody></table></div>` : `<div class="notice">Todos os cadastros filtrados possuem correlacao com resultados importados.</div>`}
       </section>
+      ` : ""}
     </section>
     <section class="card">
       <h3>Análise diagnóstica por habilidade e questão</h3>
@@ -706,6 +700,7 @@ function reportsSubnav() {
     <button type="button" data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
     <button type="button" data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
     <button type="button" data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
+    ${state.reportMode === "questoes" ? `<button type="button" id="questionImmersion" class="${state.showQuestionImmersion ? "active" : ""}">Imersao</button>` : ""}
   </section>`;
 }
 
