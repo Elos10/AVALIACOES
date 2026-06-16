@@ -30,6 +30,8 @@ button {
   padding: 0.6rem 0.8rem;
   border-radius: 6px;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 button:hover, .button-link:hover {
   border-color: var(--brand-2);
@@ -1049,6 +1051,13 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
 .print-logo {
   display: none;
 }
+.report-print-header {
+  display: none;
+}
+.report-print-controls {
+  display: flex;
+  justify-content: flex-end;
+}
 @media (max-width: 980px) {
   .login-card { grid-template-columns: 1fr; }
   .login-intro, .login-forms { padding: 1.4rem; }
@@ -1068,9 +1077,98 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
     size: A4 landscape;
     margin: 1cm;
   }
+  @page report {
+    size: A4;
+    margin: 1cm;
+  }
   @page habilidades {
     size: A4;
     margin: 1cm;
+  }
+  body.print-report {
+    background: white;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+    color: #111827;
+  }
+  body.print-report .shell {
+    display: block;
+  }
+  body.print-report .sidebar,
+  body.print-report .page-actions,
+  body.print-report .filters,
+  body.print-report .subnav,
+  body.print-report .no-print,
+  body.print-report .report-print-controls,
+  body.print-report button,
+  body.print-report .toolbar {
+    display: none !important;
+  }
+  body.print-report .content,
+  body.print-report .page {
+    display: block;
+    background: white;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    page: report;
+  }
+  body.print-report .report-print-header {
+    display: flex;
+    align-items: flex-start;
+    gap: .6cm;
+    border-bottom: 1px solid #98a2b3;
+    margin-bottom: .45cm;
+    padding-bottom: .25cm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  body.print-report .report-print-header img {
+    width: 5.2cm;
+    height: auto;
+    object-fit: contain;
+  }
+  body.print-report .report-print-header h1 {
+    margin: 0 0 .15cm;
+    font-family: Arial, sans-serif;
+    font-size: 15pt;
+    color: #111827;
+  }
+  body.print-report .report-print-header p {
+    margin: .04cm 0;
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
+    color: #344054;
+  }
+  body.print-report .card,
+  body.print-report .kpis,
+  body.print-report .charts,
+  body.print-report .analysis-grid,
+  body.print-report .question-analysis-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    box-shadow: none;
+  }
+  body.print-report .card {
+    border: 1px solid #d0d5dd;
+    padding: .35cm;
+    margin: 0 0 .35cm;
+  }
+  body.print-report .kpis,
+  body.print-report .charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35cm;
+    margin-bottom: .35cm;
+  }
+  body.print-report canvas {
+    max-height: 7cm;
+  }
+  body.print-report table,
+  body.print-report th,
+  body.print-report td {
+    font-family: Arial, sans-serif;
+    font-size: 11pt;
   }
   body.print-habilidades {
     background: white;

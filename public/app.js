@@ -172,8 +172,8 @@ function shell() {
           <span>${state.user.unidadeEscolar || ""}</span>
         </div>
         <nav class="nav">
-          ${nav.map(([key, label]) => `<button data-view="${key}" class="${state.view === key ? "active" : ""}">${label}</button>`).join("")}
-          <button id="logout">Sair</button>
+          ${nav.map(([key, label]) => `<button type="button" data-view="${key}" class="${state.view === key ? "active" : ""}">${label}</button>`).join("")}
+          <button type="button" id="logout">Sair</button>
         </nav>
         <div class="sidebar-logo"><img src="${assetPath("logo-detic.png")}" alt="DETIC"></div>
       </aside>
@@ -628,11 +628,13 @@ function reportsView() {
   const hasFilters = state.reportMode === "estatistica" || state.reportMode === "estatística"
     ? hasRequiredAnalysisFilters()
     : hasReportFilters();
-  if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${analysisView(false, true)}`;
-  if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${questionAnalysisView(false, true)}`;
+  if (state.reportMode === "diagnostica") return `${filtersHtml()}${reportsSubnav()}${reportPrintControls()}${reportPrintHeader("Análise Diagnóstica")}${analysisView(false, true)}`;
+  if (state.reportMode === "questoes") return `${filtersHtml()}${reportsSubnav()}${reportPrintControls()}${reportPrintHeader("Análise Diagnóstica das Questões")}${questionAnalysisView(false, true)}`;
   return `
     ${filtersHtml()}
     ${reportsSubnav()}
+    ${state.reportMode === "estatistica" || state.reportMode === "estatística" ? reportPrintControls() : ""}
+    ${state.reportMode === "estatistica" || state.reportMode === "estatística" ? reportPrintHeader("Análise Estatística") : ""}
     ${!hasFilters ? (state.reportMode === "estatistica" || state.reportMode === "estatística" ? requiredAnalysisStartState() : reportStartState()) : state.reportMode === "estatistica" ? `
       <section class="kpis">
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`)}
@@ -661,12 +663,49 @@ function reportsView() {
     <section class="card">${emptyState()}${tableHtml(state.rows)}</section>`}`;
 }
 
+function reportPrintControls() {
+  return `<section class="card no-print report-print-controls">
+    <button id="printReportMode" class="primary" type="button">Imprimir / PDF</button>
+  </section>`;
+}
+
+function reportPrintHeader(title) {
+  return `<section class="report-print-header">
+    <img src="${assetPath("logo-pmu.jpg")}" alt="Secretaria de Educação de Uberaba">
+    <div>
+      <h1>${esc(title)}</h1>
+      <p>${reportFilterSummary()}</p>
+      <p>Gerado em ${date(new Date().toISOString())}</p>
+    </div>
+  </section>`;
+}
+
+function reportFilterSummary() {
+  const labels = {
+    avaliacao: "Avaliação",
+    ano: "Ano",
+    disciplina: "Disciplina",
+    unidade: "Unidade",
+    turma: "Turma",
+    aluno: "Aluno",
+    nivel: "Nível",
+    raca: "Raça",
+    inclusao: "Inclusão",
+  };
+  const entries = Object.entries(labels).map(([key, label]) => {
+    const value = state.filters[key];
+    if (!value || (Array.isArray(value) && !value.length)) return "";
+    return `${label}: ${Array.isArray(value) ? value.join(", ") : value}`;
+  }).filter(Boolean);
+  return entries.length ? entries.join(" | ") : "Sem filtros aplicados";
+}
+
 function reportsSubnav() {
   return `<section class="subnav">
-    <button data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
-    <button data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
-    <button data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
-    <button data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
+    <button type="button" data-report-mode="padrao" class="${state.reportMode === "padrao" ? "active" : ""}">Relatorios</button>
+    <button type="button" data-report-mode="estatistica" class="${state.reportMode === "estatistica" ? "active" : ""}">Analise Estatistica</button>
+    <button type="button" data-report-mode="diagnostica" class="${state.reportMode === "diagnostica" ? "active" : ""}">Analise Diagnostica</button>
+    <button type="button" data-report-mode="questoes" class="${state.reportMode === "questoes" ? "active" : ""}">Analise Diagnostica das Questoes</button>
   </section>`;
 }
 
@@ -1313,6 +1352,13 @@ function bind() {
   document.querySelector("#printImmersion")?.addEventListener("click", () => {
     document.body.classList.add("print-immersion");
     const cleanup = () => document.body.classList.remove("print-immersion");
+    window.addEventListener("afterprint", cleanup, { once: true });
+    window.print();
+    setTimeout(cleanup, 2000);
+  });
+  document.querySelector("#printReportMode")?.addEventListener("click", () => {
+    document.body.classList.add("print-report");
+    const cleanup = () => document.body.classList.remove("print-report");
     window.addEventListener("afterprint", cleanup, { once: true });
     window.print();
     setTimeout(cleanup, 2000);
