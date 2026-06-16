@@ -9,7 +9,7 @@ const RECORDS_TABLE = 'avd_records';
 const DB_ID = 'db';
 const REST_URL = `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1`;
 const importPreviewCache = new Map();
-const DB_CACHE_MS = 120000;
+const DB_CACHE_MS = 15000;
 let dbCache = null;
 let dbCacheExpiresAt = 0;
 const questionFields = Array.from({ length: 20 }, (_, index) => `Q${index + 1}`);
@@ -207,7 +207,11 @@ async function readRecords() {
   for (let offset = 0; ; offset += pageSize) {
     let rows;
     try {
-      rows = await supabaseRequest(`/${RECORDS_TABLE}?select=${recordColumns.join(',')}&order=id.asc&limit=${pageSize}&offset=${offset}`);
+      rows = await supabaseRequest(`/${RECORDS_TABLE}?select=${recordColumns.join(',')}&order=id.asc`, {
+        headers: {
+          Range: `${offset}-${offset + pageSize - 1}`,
+        },
+      });
     } catch (error) {
       if (isMissingRecordsTable(error)) {
         throw { status: 500, error: 'Tabela de registros não encontrada.', detail: 'Execute o supabase.sql atualizado no Supabase para criar a tabela avd_records antes de importar planilhas.' };
