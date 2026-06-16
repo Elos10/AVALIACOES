@@ -641,7 +641,7 @@ function reportsView() {
       </section>
       <section class="card">
         <h3>Análise estatística por unidade</h3>
-        ${stats ? miniTable("Unidades", stats.unidades.slice(0, 20), ["label", "percentual", "alunos"]) : ""}
+        ${stats ? miniTable("Unidades", stats.unidades, ["label", "percentual", "alunos"]) : ""}
       </section>
     ` : `
     <section class="card">
