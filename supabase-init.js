@@ -508,7 +508,17 @@ function tableRows(records, limit = 500) {
     item.percentual = item.pontosPossiveis ? round((item.pontos / item.pontosPossiveis) * 100) : 0;
     groups.set(key, item);
   }
-  return [...groups.values()].slice(0, limit);
+  return [...groups.values()]
+    .sort((a, b) => compareTableRows(a, b))
+    .slice(0, limit);
+}
+
+function compareTableRows(a, b) {
+  return String(a.unidade || '').localeCompare(String(b.unidade || ''), 'pt-BR', { numeric: true }) ||
+    String(a.turma || '').localeCompare(String(b.turma || ''), 'pt-BR', { numeric: true }) ||
+    String(a.ano || '').localeCompare(String(b.ano || ''), 'pt-BR', { numeric: true }) ||
+    String(a.disciplina || '').localeCompare(String(b.disciplina || ''), 'pt-BR') ||
+    String(a.nivel || '').localeCompare(String(b.nivel || ''), 'pt-BR');
 }
 
 function diagnosticAnalysis(records) {
