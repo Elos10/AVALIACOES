@@ -480,6 +480,13 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   letter-spacing: .02em;
   box-shadow: 0 18px 48px rgba(0, 31, 100, .22);
 }
+.loading-overlay {
+  z-index: 9998;
+}
+.loading-overlay > div {
+  min-width: min(430px, calc(100vw - 2rem));
+  color: #0038a8;
+}
 .loading-box, .empty-box {
   border: 1px dashed var(--line);
   border-radius: 8px;

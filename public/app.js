@@ -105,7 +105,7 @@ async function boot() {
 
 function render() {
   app.dataset.loaded = "true";
-  app.innerHTML = `${state.user ? shell() : loginView()}${savingOverlayHtml()}`;
+  app.innerHTML = `${state.user ? shell() : loginView()}${savingOverlayHtml()}${loadingOverlayHtml()}`;
   bind();
   drawCharts();
 }
@@ -113,6 +113,12 @@ function render() {
 function savingOverlayHtml() {
   return `<div id="savingOverlay" class="saving-overlay ${state.saving ? "is-visible" : ""}" role="status" aria-live="polite">
     <div>SALVANDO INFORMAÇÕES</div>
+  </div>`;
+}
+
+function loadingOverlayHtml() {
+  return `<div id="loadingOverlay" class="saving-overlay loading-overlay ${state.loading ? "is-visible" : ""}" role="status" aria-live="polite">
+    <div>AGUARDE, CARREGANDO INFORMAÇÕES</div>
   </div>`;
 }
 
