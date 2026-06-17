@@ -34,6 +34,7 @@ const state = {
   activeDiagnosticIndex: 0,
   optionTotal: 0,
   loading: false,
+  loadingRequests: 0,
   saving: false,
   message: "",
   error: "",
@@ -117,7 +118,7 @@ function savingOverlayHtml() {
 }
 
 function loadingOverlayHtml() {
-  return `<div id="loadingOverlay" class="saving-overlay loading-overlay ${state.loading ? "is-visible" : ""}" role="status" aria-live="polite">
+  return `<div id="loadingOverlay" class="saving-overlay loading-overlay ${state.loading || state.loadingRequests > 0 ? "is-visible" : ""}" role="status" aria-live="polite">
     <div>AGUARDE, CARREGANDO INFORMAÇÕES</div>
   </div>`;
 }
@@ -2012,7 +2013,10 @@ async function api(url, options = {}) {
   const cacheKey = method === "GET" ? `${method}:${url}:${state.token || ""}` : "";
   if (cacheKey && apiCache.has(cacheKey)) return structuredClone(apiCache.get(cacheKey));
   const showSaving = shouldShowSavingOverlay(method, url);
+  const showLoading = method === "GET" && options.loading !== false;
+  const loadingStartedAt = Date.now();
   if (showSaving) setSavingOverlay(true);
+  if (showLoading) setLoadingOverlay(true);
   try {
     const result = await window.AVD_DB_REQUEST(method, url, options.body || options.form, { token: state.token, auth: options.auth !== false });
     if (cacheKey) apiCache.set(cacheKey, structuredClone(result));
@@ -2023,6 +2027,11 @@ async function api(url, options = {}) {
     throw new Error(error?.detail ? `${message} ${error.detail}` : message);
   } finally {
     if (showSaving) setSavingOverlay(false);
+    if (showLoading) {
+      const remaining = Math.max(0, 350 - (Date.now() - loadingStartedAt));
+      if (remaining) await new Promise((resolve) => setTimeout(resolve, remaining));
+      setLoadingOverlay(false);
+    }
   }
 }
 
@@ -2043,6 +2052,12 @@ function setSavingOverlay(value) {
   state.saving = value;
   const overlay = document.querySelector("#savingOverlay");
   if (overlay) overlay.classList.toggle("is-visible", value);
+}
+
+function setLoadingOverlay(value) {
+  state.loadingRequests = Math.max(0, (state.loadingRequests || 0) + (value ? 1 : -1));
+  const overlay = document.querySelector("#loadingOverlay");
+  if (overlay) overlay.classList.toggle("is-visible", state.loading || state.loadingRequests > 0);
 }
 
 function assetPath(fileName) {
