@@ -472,15 +472,15 @@ function questionImmersionView(data) {
       </div>
     </div>
     <div class="immersion-grid">
-      ${immersionQuadrant("1. Reensino focal do Currículo Municipal", "CURR", "Retomar objetos do conhecimento com menor dominio.", [
-        `Habilidades foco: ${focusItems.length ? focusItems.join("; ") : "manter acompanhamento das questoes filtradas"}.`,
-        `Ancoragem curricular: ${curriculumAnchors.length ? curriculumAnchors.join("; ") : "usar os objetos do conhecimento cadastrados no planejamento"}.`,
-        "Planejar miniaulas de 20 a 30 minutos com modelagem, exemplos guiados e checagem rapida de compreensao.",
+      ${immersionQuadrantStructured("1. Reensino focal do Currículo Municipal", "CURR", "Retomar objetos do conhecimento com menor dominio.", [
+        { label: "Habilidades foco", items: focusItems.length ? focusItems : ["Manter acompanhamento das questoes filtradas."] },
+        { label: "Ancoragem curricular", items: curriculumAnchors.length ? curriculumAnchors : ["Usar os objetos do conhecimento cadastrados no planejamento."] },
+        { label: "Planejamento", items: ["Planejar miniaulas de 20 a 30 minutos com modelagem, exemplos guiados e checagem rapida de compreensao."] },
       ])}
-      ${immersionQuadrant("2. Laboratorio de distratores", "ERRO", "Transformar respostas incorretas em evidencias de aprendizagem.", [
-        `Distratores prioritarios: ${distractorItems.length ? distractorItems.join("; ") : "sem distrator dominante identificado"}.`,
-        "Organizar discussoes por alternativa escolhida, comparando o raciocinio do estudante com a alternativa correta cadastrada.",
-        "Criar devolutivas curtas por questao, distinguindo erro conceitual, erro de leitura, procedimento incompleto e calculo.",
+      ${immersionQuadrantStructured("2. Laboratorio de distratores", "ERRO", "Transformar respostas incorretas em evidencias de aprendizagem.", [
+        { label: "Distratores prioritarios", items: distractorItems.length ? distractorItems : ["Sem distrator dominante identificado."] },
+        { label: "Discussao orientada", items: ["Organizar discussoes por alternativa escolhida, comparando o raciocinio do estudante com a alternativa correta cadastrada."] },
+        { label: "Devolutiva", items: ["Criar devolutivas curtas por questao, distinguindo erro conceitual, erro de leitura, procedimento incompleto e calculo."] },
       ])}
       ${immersionQuadrant("3. Rotacao imersiva por estacoes", "ACAO", "Atender grupos com necessidades diferentes sem perder o foco da turma.", [
         "Estacao 1: retomada orientada pelo professor nas questoes de prioridade alta.",
@@ -553,6 +553,22 @@ function immersionQuadrant(title, icon, focus, actions) {
       <h3>${esc(title)}</h3>
       <p>${esc(focus)}</p>
       <ul class="clean-list">${actions.map((action) => `<li>${esc(action)}</li>`).join("")}</ul>
+    </div>
+  </article>`;
+}
+
+function immersionQuadrantStructured(title, icon, focus, sections) {
+  return `<article class="immersion-card immersion-card-structured">
+    <div class="immersion-illustration" aria-hidden="true">${esc(icon)}</div>
+    <div>
+      <h3>${esc(title)}</h3>
+      <p>${esc(focus)}</p>
+      <div class="immersion-sections">
+        ${sections.map((section) => `<section>
+          <strong>${esc(section.label)}:</strong>
+          <ul class="clean-list">${section.items.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>
+        </section>`).join("")}
+      </div>
     </div>
   </article>`;
 }

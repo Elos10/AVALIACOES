@@ -1067,6 +1067,25 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   line-height: 1.45;
   margin: 0 0 .55rem;
 }
+.immersion-sections {
+  display: grid;
+  gap: .75rem;
+}
+.immersion-sections section {
+  display: grid;
+  gap: .25rem;
+}
+.immersion-sections strong {
+  color: var(--brand);
+  font-size: .9rem;
+}
+.immersion-sections .clean-list {
+  margin: 0;
+}
+.immersion-sections .clean-list li {
+  line-height: 1.45;
+  margin-bottom: .25rem;
+}
 .immersion-illustration {
   width: 58px;
   height: 58px;
