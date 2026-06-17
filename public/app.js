@@ -91,6 +91,8 @@ const chartRegistry = new Map();
 boot();
 
 async function boot() {
+  state.loading = Boolean(state.token);
+  render();
   if (state.token) {
     try {
       const me = await api("/me");
@@ -101,6 +103,7 @@ async function boot() {
       logoutLocal();
     }
   }
+  state.loading = false;
   render();
 }
 
@@ -1575,6 +1578,9 @@ function logoutLocal() {
 }
 
 async function loadCurrent(loadId = ++currentLoadId) {
+  const loadingStartedAt = Date.now();
+  state.loading = true;
+  render();
   try {
     if (state.view === "admin") await loadAdmin();
     else if (state.view === "importacoes") await loadImports();
@@ -1589,6 +1595,7 @@ async function loadCurrent(loadId = ++currentLoadId) {
   } catch (error) {
     state.error = error.message;
   } finally {
+    await waitForMinimumLoading(loadingStartedAt);
     state.loading = false;
     render();
   }
@@ -2058,6 +2065,11 @@ function setLoadingOverlay(value) {
   state.loadingRequests = Math.max(0, (state.loadingRequests || 0) + (value ? 1 : -1));
   const overlay = document.querySelector("#loadingOverlay");
   if (overlay) overlay.classList.toggle("is-visible", state.loading || state.loadingRequests > 0);
+}
+
+async function waitForMinimumLoading(startedAt, minimum = 500) {
+  const remaining = Math.max(0, minimum - (Date.now() - startedAt));
+  if (remaining) await new Promise((resolve) => setTimeout(resolve, remaining));
 }
 
 function assetPath(fileName) {
