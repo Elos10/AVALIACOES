@@ -1097,7 +1097,7 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
     margin: 1cm;
   }
   @page report {
-    size: A4;
+    size: A4 landscape;
     margin: 1cm;
   }
   @page habilidades {
