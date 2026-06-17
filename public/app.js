@@ -415,7 +415,7 @@ function consolidatedQuestionRows(rows) {
         ...row,
         id: row.questao,
         percentual,
-        prioridade: percentual < 50 ? "Alta" : percentual < 70 ? "Media" : "Monitoramento",
+        prioridade: percentual < 40 ? "Alta" : percentual < 60 ? "Media" : "Monitoramento",
         descritorUsado: descritores.length > 1 ? descritores.join(" | ") : (descritores[0] || row.descritorUsado),
         objetoConhecimento: objetos.length > 1 ? objetos.join(" | ") : (objetos[0] || row.objetoConhecimento),
         diagnostico: row.ids.length > 1
@@ -453,9 +453,9 @@ function questionImmersionView(data) {
       <button class="primary" id="printImmersion">Imprimir Imersao</button>
     </div>
     <div class="immersion-summary">
-      ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626", "Quantidade de questões com aproveitamento abaixo de 50%, indicando necessidade imediata de intervenção.")}
-      ${immersionMetric("Prioridade media", plan.medium.length, "#f97316", "Quantidade de questões com aproveitamento de 50% a 69,9%, indicando necessidade de retomada e acompanhamento.")}
-      ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a", "Quantidade de questões com aproveitamento igual ou acima de 70%, indicando acompanhamento para manutenção do desempenho.")}
+      ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626", "Quantidade de questões com aproveitamento abaixo de 39,9%, indicando necessidade imediata de intervenção.")}
+      ${immersionMetric("Prioridade media", plan.medium.length, "#f97316", "Quantidade de questões com aproveitamento entre 40% e 59,9%, indicando necessidade de retomada e acompanhamento.")}
+      ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a", "Quantidade de questões com aproveitamento acima de 60%, indicando acompanhamento para manutenção do desempenho.")}
     </div>
     <div class="immersion-visual-grid">
       <div class="immersion-chart-card">
@@ -501,9 +501,9 @@ function buildQuestionImmersionPlan(data) {
   const rows = consolidatedQuestionRows(data?.rows || [])
     .filter((row) => row && row.correlato !== false)
     .sort((a, b) => Number(a.percentual || 0) - Number(b.percentual || 0) || Number(a.questaoNumero || 0) - Number(b.questaoNumero || 0));
-  const high = rows.filter((row) => Number(row.percentual || 0) < 50);
-  const medium = rows.filter((row) => Number(row.percentual || 0) >= 50 && Number(row.percentual || 0) < 70);
-  const monitoring = rows.filter((row) => Number(row.percentual || 0) >= 70);
+  const high = rows.filter((row) => Number(row.percentual || 0) < 40);
+  const medium = rows.filter((row) => Number(row.percentual || 0) >= 40 && Number(row.percentual || 0) < 60);
+  const monitoring = rows.filter((row) => Number(row.percentual || 0) >= 60);
   const dominantDistractors = rows.map((row) => {
     const entries = Object.entries(row.distribuicaoRespostas || {})
       .filter(([alternative]) => ["A", "B", "C", "D", "E"].includes(alternative) && alternative !== row.alternativaCorreta)
