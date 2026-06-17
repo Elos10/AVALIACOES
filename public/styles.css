@@ -999,6 +999,11 @@ th { background: var(--brand-soft); color: #233b76; position: sticky; top: 0; }
   color: var(--metric-color);
   font-size: 1.5rem;
 }
+.immersion-metric strong[title] {
+  cursor: help;
+  text-decoration: underline dotted rgba(0, 56, 168, .35);
+  text-underline-offset: 4px;
+}
 .immersion-metric span {
   color: var(--muted);
   font-size: .82rem;
