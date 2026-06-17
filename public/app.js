@@ -238,9 +238,9 @@ function dashboardView() {
     ${filtersHtml()}
     ${!hasFilters ? dashboardStartState() : `
       <section class="kpis">
-      ${kpi("Alunos avaliados", k.totalAlunos || 0)}
+      ${kpi("Alunos avaliados", k.totalAlunos || 0, "Quantidade de registros/alunos avaliados dentro dos filtros aplicados.")}
       ${kpi("Pontos possíveis", k.pontosPossiveis || 0)}
-      ${kpi("Acertos", k.acertos || 0)}
+      ${kpi("Acertos", k.acertos || 0, "Soma dos pontos obtidos pelos alunos dentro dos filtros aplicados.")}
       ${kpi("% de acertos", `${k.percentualAcertos || 0}%`)}
       </section>
       <section class="charts">
@@ -269,10 +269,10 @@ function analysisView(showFilters = true, requireFilters = false) {
       <p class="muted">Leitura pedagogica dos resultados filtrados, com indicacoes de prioridades para recomposicao e melhoria das notas.</p>
       ${a ? `
         <section class="kpis">
-          ${kpi("Alunos analisados", a.resumo.totalAlunos)}
-          ${kpi("% geral", `${a.resumo.percentualGeral}%`)}
-          ${kpi("% critico", `${a.resumo.percentualCritico}%`)}
-          ${kpi("Acertos", a.resumo.acertos)}
+          ${kpi("Alunos analisados", a.resumo.totalAlunos, "Quantidade de alunos/registros considerados na análise diagnóstica conforme os filtros aplicados.")}
+          ${kpi("% geral", `${a.resumo.percentualGeral}%`, "Percentual geral calculado pela soma dos acertos dividida pela soma dos pontos possíveis no recorte filtrado.")}
+          ${kpi("% critico", `${a.resumo.percentualCritico}%`, "Percentual de alunos classificados em níveis críticos em relação ao total analisado.")}
+          ${kpi("Acertos", a.resumo.acertos, "Soma dos pontos obtidos pelos alunos considerados na análise diagnóstica.")}
         </section>
         <div class="analysis-grid">
           <div>
@@ -307,10 +307,10 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
     </section>` : `
     ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
-      ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0)}
-      ${kpi("Com dados correlatos", k.habilidadesComDados || 0)}
-      ${kpi("Avaliações por questão", k.totalAvaliacoesQuestao || 0)}
-      ${kpi("% medio", `${k.percentualMedio || 0}%`)}
+      ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0, "Total de questões/habilidades cadastradas que atendem aos filtros de avaliação, ano e disciplina.")}
+      ${kpi("Com dados correlatos", k.habilidadesComDados || 0, "Quantidade de habilidades cadastradas que possuem resultados correspondentes na base importada.")}
+      ${kpi("Avaliações por questão", k.totalAvaliacoesQuestao || 0, "Total de respostas/registros avaliados nas questões correlacionadas aos filtros selecionados.")}
+      ${kpi("% medio", `${k.percentualMedio || 0}%`, "Média dos percentuais de acerto das questões/habilidades correlacionadas no recorte filtrado.")}
     </section>
     <section class="charts">
       ${chartCard("Desempenho das questoes cadastradas", "questionDiagnosticChart")}
@@ -453,9 +453,9 @@ function questionImmersionView(data) {
       <button class="primary" id="printImmersion">Imprimir Imersao</button>
     </div>
     <div class="immersion-summary">
-      ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626")}
-      ${immersionMetric("Prioridade media", plan.medium.length, "#f97316")}
-      ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a")}
+      ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626", "Quantidade de questões com aproveitamento abaixo de 50%, indicando necessidade imediata de intervenção.")}
+      ${immersionMetric("Prioridade media", plan.medium.length, "#f97316", "Quantidade de questões com aproveitamento de 50% a 69,9%, indicando necessidade de retomada e acompanhamento.")}
+      ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a", "Quantidade de questões com aproveitamento igual ou acima de 70%, indicando acompanhamento para manutenção do desempenho.")}
     </div>
     <div class="immersion-visual-grid">
       <div class="immersion-chart-card">
@@ -523,9 +523,10 @@ function buildQuestionImmersionPlan(data) {
   };
 }
 
-function immersionMetric(label, value, color) {
+function immersionMetric(label, value, color, help = "") {
+  const title = help ? ` title="${esc(help)}"` : "";
   return `<div class="immersion-metric" style="--metric-color:${color}">
-    <strong>${esc(value)}</strong>
+    <strong${title}>${esc(value)}</strong>
     <span>${esc(label)}</span>
   </div>`;
 }
