@@ -5,7 +5,7 @@ const state = {
   refreshToken: localStorage.getItem("refreshToken"),
   user: null,
   permissions: {},
-  view: "dashboard",
+  view: "inicio",
   viewHistory: [],
   options: {},
   filters: {},
@@ -98,7 +98,6 @@ async function boot() {
       const me = await api("/me");
       state.user = me.user;
       state.permissions = me.permissions;
-      await loadDashboard();
     } catch {
       logoutLocal();
     }
@@ -189,7 +188,7 @@ function shell() {
       </aside>
       <section class="content">
         <div class="page">
-          ${pageActionsHtml()}
+          ${state.view === "inicio" ? "" : pageActionsHtml()}
           ${alertHtml()}
           ${viewHtml()}
         </div>
@@ -198,6 +197,7 @@ function shell() {
 }
 
 function viewHtml() {
+  if (state.view === "inicio") return homeView();
   if (state.view === "admin") return adminView();
   if (state.view === "importacoes") return importView();
   if (state.view === "analise") return analysisView();
@@ -209,6 +209,14 @@ function viewHtml() {
   if (state.view === "qualidade") return qualityView();
   if (state.view === "comparativo") return compareView();
   return dashboardView();
+}
+
+function homeView() {
+  return `<section class="home-screen">
+    <div class="home-logo-wrap">
+      <img src="${assetPath("logo-pmu.jpg")}" alt="Secretaria de Educação de Uberaba">
+    </div>
+  </section>`;
 }
 
 function pageActionsHtml() {
@@ -307,6 +315,7 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
     </section>` : `
     ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
+      ${kpi("Alunos analisados", k.totalAvaliacoesQuestao || 0, "Total de respostas/registros avaliados nas questões correlacionadas aos filtros selecionados.")}
       ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0, "Total de questões/habilidades cadastradas que atendem aos filtros de avaliação, ano e disciplina.")}
       ${kpi("Com dados correlatos", k.habilidadesComDados || 0, "Quantidade de habilidades cadastradas que possuem resultados correspondentes na base importada.")}
       ${kpi("Avaliações por questão", k.totalAvaliacoesQuestao || 0, "Total de respostas/registros avaliados nas questões correlacionadas aos filtros selecionados.")}
@@ -453,6 +462,7 @@ function questionImmersionView(data) {
       <button class="primary" id="printImmersion">Imprimir Imersao</button>
     </div>
     <div class="immersion-summary">
+      ${immersionMetric("Alunos analisados", plan.alunosAnalisados, "#0038a8", "Total de respostas/registros avaliados nas questões usadas para gerar a Imersão.")}
       ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626", "Quantidade de questões com aproveitamento abaixo de 39,9%, indicando necessidade imediata de intervenção.")}
       ${immersionMetric("Prioridade media", plan.medium.length, "#f97316", "Quantidade de questões com aproveitamento entre 40% e 59,9%, indicando necessidade de retomada e acompanhamento.")}
       ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a", "Quantidade de questões com aproveitamento acima de 60%, indicando acompanhamento para manutenção do desempenho.")}
@@ -519,6 +529,7 @@ function buildQuestionImmersionPlan(data) {
     monitoring,
     dominantDistractors,
     priorityRows: rows,
+    alunosAnalisados: rows.reduce((sum, row) => sum + Number(row.avaliados || 0), 0),
     average: rows.length ? Math.round((totalPercent / rows.length) * 10) / 10 : 0,
   };
 }
@@ -657,6 +668,7 @@ function reportsView() {
     ${state.reportMode === "estatistica" || state.reportMode === "estatística" ? reportPrintHeader("Análise Estatística") : ""}
     ${!hasFilters ? (state.reportMode === "estatistica" || state.reportMode === "estatística" ? requiredAnalysisStartState() : reportStartState()) : state.reportMode === "estatistica" ? `
       <section class="kpis">
+        ${kpi("Alunos analisados", stats?.resumo.totalRegistros || 0, "Quantidade de registros/alunos considerados na análise estatística conforme os filtros aplicados.")}
         ${kpi("Media %", `${stats?.resumo.mediaPercentual || 0}%`, "Soma dos percentuais de acerto dividida pela quantidade de registros considerados nos filtros.")}
         ${kpi("Mediana %", `${stats?.resumo.medianaPercentual || 0}%`, "Valor central dos percentuais de acerto ordenados do menor para o maior.")}
         ${kpi("Desvio padrao", `${stats?.resumo.desvioPadraoPercentual || 0}`, "Mede a dispersao dos percentuais em relacao a media. Quanto maior, mais variacao entre os resultados.")}
@@ -1555,13 +1567,16 @@ function removeInvalidSelections() {
 }
 
 async function goBack() {
-  state.view = "dashboard";
+  state.view = "inicio";
   state.viewHistory = [];
   state.filters = {};
   state.reportMode = "padrao";
   state.showQuestionImmersion = false;
   state.activeDiagnosticIndex = 0;
-  await loadCurrent();
+  state.dashboard = null;
+  state.rows = [];
+  state.options = {};
+  render();
 }
 
 async function login(event) {
@@ -1575,7 +1590,11 @@ async function login(event) {
     state.permissions = result.permissions;
     localStorage.setItem("token", state.token);
     localStorage.setItem("refreshToken", state.refreshToken);
-    await loadDashboard();
+    state.view = "inicio";
+    state.dashboard = null;
+    state.rows = [];
+    state.filters = {};
+    state.options = {};
   } catch (error) {
     state.error = error.message;
   }
@@ -1591,7 +1610,7 @@ async function logout() {
 function logoutLocal() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
-  Object.assign(state, { token: null, refreshToken: null, user: null, dashboard: null, rows: [], filters: {}, options: {} });
+  Object.assign(state, { token: null, refreshToken: null, user: null, view: "inicio", dashboard: null, rows: [], filters: {}, options: {} });
 }
 
 async function loadCurrent(loadId = ++currentLoadId) {
