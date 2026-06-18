@@ -591,6 +591,8 @@ function immersionQuadrantStructured(title, icon, focus, sections) {
 
 function questionAnalysisCard(row) {
   const priorityClass = row.prioridade === "Alta" ? "danger" : row.prioridade === "Media" ? "warn" : "ok";
+  const diagnostico = questionDiagnosisText(row);
+  const intervencao = questionInterventionText(row);
   return `<article class="question-analysis-card">
     <header>
       <div>
@@ -617,14 +619,57 @@ function questionAnalysisCard(row) {
     <div class="analysis-grid compact-analysis">
       <div>
         <h3>Diagnostico</h3>
-        <p>${esc(row.diagnostico)}</p>
+        <p>${esc(diagnostico)}</p>
       </div>
       <div>
         <h3>Encaminhamento pedagogico</h3>
-        <p>${esc(row.intervencao)}</p>
+        <p>${esc(intervencao)}</p>
       </div>
     </div>
   </article>`;
+}
+
+function questionDiagnosisText(row) {
+  const percentual = Number(row.percentual || 0);
+  const dominant = dominantDistractor(row);
+  const base = row.diagnostico ? `${row.diagnostico} ` : "";
+  const objectText = row.objetoConhecimento
+    ? `No Currículo Municipal, o objeto do conhecimento relacionado é "${row.objetoConhecimento}". `
+    : "O item deve ser analisado em diálogo com o Currículo Municipal do ano e da disciplina selecionados. ";
+  const descriptorText = row.descritorUsado
+    ? `A questão avalia o descritor "${row.descritorUsado}". `
+    : "";
+  const resultText = `O aproveitamento foi de ${percentual}%, com ${Number(row.acertos || 0)} acertos e ${Number(row.erros || 0)} erros em ${Number(row.avaliados || 0)} avaliações. `;
+  const distractorText = dominant
+    ? `O distrator mais recorrente foi a alternativa ${dominant.alternative}, com ${dominant.count} marcações, indicando o ponto de maior atenção na leitura das respostas incorretas.`
+    : "Não houve distrator dominante identificado para aprofundar a leitura das respostas incorretas.";
+  return `${base}${objectText}${descriptorText}${resultText}${distractorText}`.trim();
+}
+
+function questionInterventionText(row) {
+  const percentual = Number(row.percentual || 0);
+  const dominant = dominantDistractor(row);
+  const objectText = row.objetoConhecimento || "objeto do conhecimento correspondente";
+  const descriptorText = row.descritorUsado || "habilidade avaliada";
+  const distractorAction = dominant
+    ? `Promover análise coletiva do distrator ${dominant.alternative}, comparando o raciocínio que levou à marcação incorreta com a alternativa correta ${row.alternativaCorreta || ""}. `
+    : "Utilizar os registros das alternativas para mapear os erros mais frequentes da turma. ";
+  const prioritaryAction = percentual < 40
+    ? "Prioridade alta: realizar reensino focal imediato, com modelagem do professor, exemplos guiados e nova checagem curta de aprendizagem. "
+    : percentual < 60
+      ? "Prioridade média: retomar a habilidade em pequenos grupos, propor atividades de recuperação dirigida e acompanhar a evolução em sondagem breve. "
+      : "Monitoramento: manter a habilidade em revisão espiralada, ampliando a complexidade dos itens e observando estudantes ainda oscilantes. ";
+  const registered = row.intervencao ? `${row.intervencao} ` : "";
+  return `${registered}${prioritaryAction}Planejar atividades alinhadas ao Currículo Municipal sobre ${objectText}, retomando ${descriptorText}. ${distractorAction}Registrar evidências por turma para verificar se a intervenção elevou o percentual de acerto na próxima avaliação.`.trim();
+}
+
+function dominantDistractor(row) {
+  const correct = String(row.alternativaCorreta || "").trim().toUpperCase();
+  const entries = Object.entries(row.distribuicaoRespostas || {})
+    .filter(([alternative]) => ["A", "B", "C", "D", "E"].includes(alternative) && alternative !== correct)
+    .map(([alternative, count]) => ({ alternative, count: Number(count || 0) }))
+    .sort((a, b) => b.count - a.count);
+  return entries[0]?.count > 0 ? entries[0] : null;
 }
 
 function answerDistributionHtml(row) {
