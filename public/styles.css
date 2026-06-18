@@ -259,6 +259,23 @@ label {
 }
 .content { min-width: 0; background: var(--bg); }
 .page { padding: 1rem; display: grid; gap: 1rem; }
+.home-screen {
+  min-height: calc(100vh - 2rem);
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+}
+.home-logo-wrap {
+  width: min(760px, 88vw);
+  display: grid;
+  place-items: center;
+}
+.home-logo-wrap img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
 .page-actions {
   display: flex;
   justify-content: flex-start;
