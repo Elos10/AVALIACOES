@@ -48,11 +48,14 @@ on conflict (id) do nothing;
 create table if not exists public.avd_records (
   id text primary key,
   importacao_id text,
-  duplicate_key text unique,
+  duplicate_key text,
   data jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.avd_records
+drop constraint if exists avd_records_duplicate_key_key;
 
 alter table public.avd_records add column if not exists avaliacao text;
 alter table public.avd_records add column if not exists unidade text;

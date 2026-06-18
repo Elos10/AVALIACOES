@@ -275,7 +275,7 @@ function recordToDb(row) {
   const payload = {
     id: normalized.id,
     importacao_id: normalized.importacaoId,
-    duplicate_key: duplicateKey(normalized),
+    duplicate_key: storageRecordKey(normalized),
     avaliacao: emptyToNull(normalized.AVALIACAO),
     unidade: emptyToNull(normalized.UNIDADE),
     ano: emptyToNull(normalized.ANO),
@@ -777,6 +777,10 @@ function duplicateKey(row) {
   return ['NOME', 'AVALIACAO', 'TURMA', 'UNIDADE', 'DISCIPLINA'].map((field) => normalizeEmail(row[field])).join('|');
 }
 
+function storageRecordKey(row) {
+  return [duplicateKey(row), row.importacaoId || 'sem-importacao', row.importRowNumber || row.id || id('linha_')].join('|');
+}
+
 async function previewImport(db, user, form) {
   const file = form?.get?.('file');
   const parsed = await readExcelFile(file);
@@ -821,26 +825,22 @@ async function commitImport(db, user, previewId) {
   const preview = importPreviewCache.get(previewId) || (db.importPreviews || []).find((item) => item.id === previewId && item.usuarioEmail === user.email);
   if (!preview) throw { status: 404, error: 'Conferência não encontrada. Confira a planilha novamente.' };
   const importId = id('imp_');
-  const existingByKey = new Map((db.records || []).map((row) => [duplicateKey(row), row]));
   const recordsToSave = [];
-  let novosRegistros = 0;
+  let novosRegistros = preview.rows.length;
   let registrosAtualizados = 0;
-  for (const row of preview.rows) {
-    const key = duplicateKey(row);
-    const next = { ...row, importacaoId: importId, atualizadoEm: new Date().toISOString() };
-    if (existingByKey.has(key)) {
-      const existing = existingByKey.get(key);
-      Object.assign(existing, next);
-      recordsToSave.push(existing);
-      registrosAtualizados += 1;
-    } else {
-      const created = { id: id('rec_'), ...next, criadoEm: new Date().toISOString() };
-      db.records.push(created);
-      existingByKey.set(key, created);
-      recordsToSave.push(created);
-      novosRegistros += 1;
-    }
-  }
+  preview.rows.forEach((row, index) => {
+    const created = {
+      id: id('rec_'),
+      ...row,
+      importacaoId: importId,
+      importRowNumber: index + 2,
+      originalDuplicateKey: duplicateKey(row),
+      criadoEm: new Date().toISOString(),
+      atualizadoEm: new Date().toISOString(),
+    };
+    db.records.push(created);
+    recordsToSave.push(created);
+  });
   const importInfo = {
     id: importId,
     nomeArquivo: preview.nomeArquivo,
@@ -854,7 +854,7 @@ async function commitImport(db, user, previewId) {
   db.importPreviews = (db.importPreviews || []).filter((item) => item.id !== previewId);
   importPreviewCache.delete(previewId);
   log(db, user, 'IMPORTOU_PLANILHA', importInfo);
-  await upsertRecords([...new Map(recordsToSave.map((row) => [row.id, row])).values()]);
+  await upsertRecords(recordsToSave);
   await writeDb(db);
   return { ok: true, importacao: importInfo, kpis: dashboard(recordsForUser(db, user)) };
 }
