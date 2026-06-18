@@ -315,7 +315,7 @@ function questionAnalysisView(showFilters = true, useReportFilters = false) {
     </section>` : `
     ${state.showQuestionImmersion ? questionImmersionView(data) : ""}
     <section class="kpis">
-      ${kpi("Alunos analisados", k.totalAvaliacoesQuestao || 0, "Total de respostas/registros avaliados nas questões correlacionadas aos filtros selecionados.")}
+      ${kpi("Alunos analisados", k.alunosAnalisados || 0, "Quantidade de alunos/registros considerados no recorte filtrado da análise diagnóstica das questões.")}
       ${kpi("Habilidades cadastradas", k.habilidadesCadastradas || 0, "Total de questões/habilidades cadastradas que atendem aos filtros de avaliação, ano e disciplina.")}
       ${kpi("Com dados correlatos", k.habilidadesComDados || 0, "Quantidade de habilidades cadastradas que possuem resultados correspondentes na base importada.")}
       ${kpi("Avaliações por questão", k.totalAvaliacoesQuestao || 0, "Total de respostas/registros avaliados nas questões correlacionadas aos filtros selecionados.")}
@@ -453,16 +453,21 @@ function questionImmersionView(data) {
         <h3>Consolidado de acoes imersivas para elevar o aproveitamento</h3>
         <p class="muted">Gerado a partir das questoes cadastradas, respostas importadas e correlacao com Avaliacao, Ano e Disciplina.</p>
       </div>
-      <div class="immersion-score">
-        <strong>${esc(plan.average)}%</strong>
-        <span>Aproveitamento medio</span>
+      <div class="immersion-header-metrics">
+        <div class="immersion-score">
+          <strong>${esc(plan.average)}%</strong>
+          <span>Aproveitamento medio</span>
+        </div>
+        <div class="immersion-score">
+          <strong>${esc(plan.alunosAnalisados)}</strong>
+          <span>Alunos analisados</span>
+        </div>
       </div>
     </div>
     <div class="toolbar immersion-actions no-print">
       <button class="primary" id="printImmersion">Imprimir Imersao</button>
     </div>
     <div class="immersion-summary">
-      ${immersionMetric("Alunos analisados", plan.alunosAnalisados, "#0038a8", "Total de respostas/registros avaliados nas questões usadas para gerar a Imersão.")}
       ${immersionMetric("Prioridade alta", plan.high.length, "#dc2626", "Quantidade de questões com aproveitamento abaixo de 39,9%, indicando necessidade imediata de intervenção.")}
       ${immersionMetric("Prioridade media", plan.medium.length, "#f97316", "Quantidade de questões com aproveitamento entre 40% e 59,9%, indicando necessidade de retomada e acompanhamento.")}
       ${immersionMetric("Monitoramento", plan.monitoring.length, "#16a34a", "Quantidade de questões com aproveitamento acima de 60%, indicando acompanhamento para manutenção do desempenho.")}
@@ -529,7 +534,7 @@ function buildQuestionImmersionPlan(data) {
     monitoring,
     dominantDistractors,
     priorityRows: rows,
-    alunosAnalisados: rows.reduce((sum, row) => sum + Number(row.avaliados || 0), 0),
+    alunosAnalisados: Number(data?.kpis?.alunosAnalisados || 0),
     average: rows.length ? Math.round((totalPercent / rows.length) * 10) / 10 : 0,
   };
 }

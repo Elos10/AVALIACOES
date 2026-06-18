@@ -861,6 +861,9 @@ async function commitImport(db, user, previewId) {
 
 function questionAnalysis(db, user, filters = {}) {
   const habilidades = db.habilidadesAplicadas || [];
+  const baseFilters = { ...filters };
+  delete baseFilters.questao;
+  const baseRecords = filteredRecords(db, user, baseFilters);
   const filtered = habilidades.filter((item) => (
     valuesMatch(item.avaliacao, filters.avaliacao) &&
     valuesMatch(item.ano, filters.ano) &&
@@ -879,7 +882,7 @@ function questionAnalysis(db, user, filters = {}) {
     const distribuicaoRespostas = Object.fromEntries(['A', 'B', 'C', 'D', 'E'].map((alt) => [alt, records.filter((row) => String(row[q] || '').trim().toUpperCase() === alt).length]));
     return { ...item, questao: q, questaoNumero: item.questao, avaliados, acertos, erros: Math.max(avaliados - acertos, 0), percentual: avaliados ? round((acertos / avaliados) * 100) : 0, distribuicaoRespostas };
   }).sort((a, b) => Number(a.questaoNumero || 0) - Number(b.questaoNumero || 0));
-  return { filters, options: questionOptions(habilidades, filters), rows, inconsistencias: [], kpis: { habilidadesCadastradas: filtered.length, habilidadesComDados: rows.filter((row) => row.avaliados).length, totalAvaliacoesQuestao: rows.reduce((s, row) => s + row.avaliados, 0), percentualMedio: rows.length ? round(rows.reduce((s, row) => s + row.percentual, 0) / rows.length) : 0 } };
+  return { filters, options: questionOptions(habilidades, filters), rows, inconsistencias: [], kpis: { alunosAnalisados: baseRecords.length, habilidadesCadastradas: filtered.length, habilidadesComDados: rows.filter((row) => row.avaliados).length, totalAvaliacoesQuestao: rows.reduce((s, row) => s + row.avaliados, 0), percentualMedio: rows.length ? round(rows.reduce((s, row) => s + row.percentual, 0) / rows.length) : 0 } };
 }
 
 function questionOptions(items, filters) {
