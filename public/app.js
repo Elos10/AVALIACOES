@@ -131,20 +131,11 @@ function loginView() {
   return `
     <section class="login">
       <div class="login-card">
-        <div class="login-intro">
-          <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
-          <span class="login-kicker">Secretaria de Educação de Uberaba</span>
-          <h1>AVALIAÇÃO DIAGNÓSTICA</h1>
-          <div class="login-meta">
-            <span>Diretoria de Ensino</span>
-            <span>Departamento de Educação Tecnológica</span>
-          </div>
-        </div>
+        <img class="login-logo" src="${assetPath("logo-semed.png")}" alt="Secretaria de Educação de Uberaba" onerror="this.style.display='none'">
         <div class="login-forms">
           <div class="login-form-head">
-            <span class="badge">Acesso restrito</span>
-            <h2>Entrar no sistema</h2>
-            <p>Informe seu e-mail e senha para validar o perfil de acesso.</p>
+            <h1>AVALIAÇÃO DIAGNÓSTICA</h1>
+            <p>Sistema web da Secretaria Municipal de Educação de Uberaba.</p>
           </div>
           ${alertHtml()}
           <form id="loginForm">
