@@ -1708,6 +1708,10 @@ async function goBack() {
 async function login(event) {
   event.preventDefault();
   const data = Object.fromEntries(new FormData(event.target));
+  state.error = "";
+  state.message = "";
+  state.loading = true;
+  render();
   try {
     const result = await api("/auth/login", { method: "POST", body: data, auth: false });
     state.token = result.token;
@@ -1722,8 +1726,10 @@ async function login(event) {
     state.filters = {};
     applyUserScopeFilters();
     state.options = {};
+    state.loading = false;
   } catch (error) {
     state.error = error.message;
+    state.loading = false;
   }
   render();
 }
@@ -1749,6 +1755,7 @@ async function loadCurrent(loadId = ++currentLoadId) {
     state.loading = false;
     return;
   }
+  const viewAtStart = state.view;
   const loadingStartedAt = Date.now();
   state.loading = true;
   render();
@@ -1764,8 +1771,10 @@ async function loadCurrent(loadId = ++currentLoadId) {
     else if (state.view === "curriculoMunicipal") await loadCurriculoMunicipal();
     else await loadDashboard();
   } catch (error) {
+    if (loadId !== currentLoadId || state.view !== viewAtStart) return;
     state.error = error.message;
   } finally {
+    if (loadId !== currentLoadId || state.view !== viewAtStart) return;
     await waitForMinimumLoading(loadingStartedAt);
     state.loading = false;
     render();
