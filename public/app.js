@@ -13,6 +13,7 @@ const state = {
   rows: [],
   users: [],
   editingUserId: "",
+  adminUnitOptions: [],
   imports: [],
   importStats: null,
   logs: [],
@@ -1170,12 +1171,19 @@ function adminView() {
   const editingUser = state.users.find((user) => user.id === state.editingUserId);
   const submitLabel = editingUser ? "Salvar alteracoes" : "Cadastrar usuario";
   const passwordAttrs = editingUser ? 'placeholder="Preencha apenas se desejar alterar"' : "required";
+  const unitOptions = adminUnitOptions(editingUser?.unidadeEscolar);
   return `
     <section class="admin-stack">
       <div class="card">
         <h3>Usuarios</h3>
         <form id="userForm" class="form-grid">
-          <label>Unidade escolar <input name="unidadeEscolar" required value="${esc(editingUser?.unidadeEscolar || "")}"></label>
+          <label>Unidade escolar ${unitOptions.length
+            ? `<select name="unidadeEscolar" required>
+                <option value="">Selecione a unidade</option>
+                ${unitOptions.map((unit) => `<option value="${esc(unit)}" ${editingUser?.unidadeEscolar === unit ? "selected" : ""}>${esc(unit)}</option>`).join("")}
+              </select>`
+            : `<input name="unidadeEscolar" required value="${esc(editingUser?.unidadeEscolar || "")}" placeholder="Digite a unidade escolar">`}
+          </label>
           <label>E-mail <input name="email" type="email" required value="${esc(editingUser?.email || "")}"></label>
           <label>Senha <input name="senha" type="password" ${passwordAttrs}></label>
           <label>Perfil <select name="perfil">
@@ -1204,6 +1212,14 @@ function adminView() {
         </tbody></table></div>
       </div>
     </section>`;
+}
+
+function adminUnitOptions(current = "") {
+  const values = [...(state.adminUnitOptions || [])];
+  for (const unit of ["SEMED", current].filter(Boolean)) {
+    if (!values.includes(unit)) values.unshift(unit);
+  }
+  return values;
 }
 
 function permissionsHtml() {
@@ -1884,9 +1900,16 @@ async function deleteImport(id) {
 }
 
 async function loadAdmin() {
-  state.users = await api("/admin/users");
-  state.adminPermissions = await api("/admin/permissions");
-  state.logs = await api("/logs");
+  const [users, permissions, logs, optionsPayload] = await Promise.all([
+    api("/admin/users"),
+    api("/admin/permissions"),
+    api("/logs"),
+    api("/options"),
+  ]);
+  state.users = users;
+  state.adminPermissions = permissions;
+  state.logs = logs;
+  state.adminUnitOptions = optionsPayload?.options?.unidade || [];
 }
 
 async function loadHabilidadesAplicadas() {
