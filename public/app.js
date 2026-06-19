@@ -98,6 +98,7 @@ async function boot() {
       const me = await api("/me");
       state.user = me.user;
       state.permissions = me.permissions;
+      applyUserScopeFilters();
     } catch {
       logoutLocal();
     }
@@ -228,15 +229,49 @@ function pageActionsHtml() {
 function filtersHtml() {
   return `<section class="filters ${state.loading ? "is-loading" : ""}">
     <div class="filter-status">${state.loading ? "Atualizando filtros..." : "Filtros inteligentes em tempo real"}</div>
-    ${filterOrder.map((key) => `
+    ${filterOrder.map((key) => {
+      const unitLocked = key === "unidade" && isUnitManager();
+      const disabled = state.loading || unitLocked;
+      const values = optionValuesForFilter(key);
+      return `
       <label>${filterLabels[key]}
-        <select data-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${state.loading ? "disabled" : ""}>
-          <option value="">Todos</option>
-          ${(state.options[key] || []).map((v) => `<option ${isSelectedFilter(key, v) ? "selected" : ""}>${esc(v)}</option>`).join("")}
+        <select data-filter="${key}" ${key === "avaliacao" ? "multiple size=\"4\"" : ""} ${disabled ? "disabled" : ""}>
+          ${unitLocked ? "" : `<option value="">Todos</option>`}
+          ${values.map((v) => `<option value="${esc(v)}" ${isSelectedFilter(key, v) ? "selected" : ""}>${esc(v)}</option>`).join("")}
         </select>
-      </label>`).join("")}
+      </label>`;
+    }).join("")}
     <div class="toolbar filter-actions"><button id="clearFilters" ${state.loading ? "disabled" : ""}>Limpar filtros</button></div>
   </section>`;
+}
+
+function isUnitManager() {
+  return state.user?.perfil === "GESTOR UNIDADE";
+}
+
+function managerUnit() {
+  return state.user?.unidadeEscolar || "";
+}
+
+function applyUserScopeFilters() {
+  const unidade = managerUnit();
+  if (isUnitManager() && unidade) state.filters.unidade = unidade;
+}
+
+function scopedFilters() {
+  const filters = { ...state.filters };
+  const unidade = managerUnit();
+  if (isUnitManager() && unidade) filters.unidade = unidade;
+  return filters;
+}
+
+function optionValuesForFilter(key) {
+  const values = [...(state.options[key] || [])];
+  const unidade = managerUnit();
+  if (key === "unidade" && isUnitManager() && unidade && !values.includes(unidade)) {
+    values.unshift(unidade);
+  }
+  return values;
 }
 
 function dashboardView() {
@@ -1405,16 +1440,22 @@ function bind() {
     render();
   }));
   document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", async () => {
-    if (state.view !== button.dataset.view) {
+    const nextView = button.dataset.view;
+    if (state.view === nextView && !state.loading) return;
+    if (state.view !== nextView) {
       state.viewHistory.push(state.view);
     }
-    state.view = button.dataset.view;
+    state.view = nextView;
+    applyUserScopeFilters();
+    state.loading = true;
+    render();
     await loadCurrent();
   }));
   document.querySelectorAll("[data-filter]").forEach((select) => select.addEventListener("change", handleFilterChange));
   document.querySelectorAll("[data-question-filter]").forEach((select) => select.addEventListener("change", handleQuestionFilterChange));
   document.querySelector("#clearFilters")?.addEventListener("click", async () => {
     state.filters = {};
+    applyUserScopeFilters();
     state.loading = true;
     render();
     await loadCurrent();
@@ -1538,12 +1579,18 @@ function updateHabilidadeFieldState(field) {
 
 async function handleFilterChange(event) {
   const key = event.target.dataset.filter;
+  if (key === "unidade" && isUnitManager()) {
+    applyUserScopeFilters();
+    render();
+    return;
+  }
   const value = key === "avaliacao"
     ? [...event.target.selectedOptions].map((option) => option.value).filter(Boolean)
     : event.target.value;
   if (Array.isArray(value) ? value.length : value) state.filters[key] = value;
   else delete state.filters[key];
   clearChildFilters(key);
+  applyUserScopeFilters();
   state.loading = true;
   render();
   await scheduleLoadCurrent();
@@ -1571,7 +1618,7 @@ function scheduleLoadCurrent() {
       if (loadId !== currentLoadId) return resolve();
       await loadCurrent(loadId);
       resolve();
-    }, 160);
+    }, 80);
   });
 }
 
@@ -1584,18 +1631,23 @@ function clearQuestionChildFilters(parentKey) {
 function clearChildFilters(parentKey) {
   const index = filterOrder.indexOf(parentKey);
   if (index < 0) return;
-  for (const child of filterOrder.slice(index + 1)) delete state.filters[child];
+  for (const child of filterOrder.slice(index + 1)) {
+    if (child === "unidade" && isUnitManager()) continue;
+    delete state.filters[child];
+  }
 }
 
 function applyOptionsPayload(payload) {
   state.options = payload.options || payload || {};
   state.optionTotal = payload.total || 0;
   removeInvalidSelections();
+  applyUserScopeFilters();
 }
 
 function removeInvalidSelections() {
   let changedAt = -1;
   for (const key of filterOrder) {
+    if (key === "unidade" && isUnitManager()) continue;
     const allowed = state.options[key] || [];
     if (Array.isArray(state.filters[key])) {
       const kept = state.filters[key].filter((value) => allowed.includes(value));
@@ -1612,20 +1664,28 @@ function removeInvalidSelections() {
     }
   }
   if (changedAt >= 0) {
-    for (const child of filterOrder.slice(changedAt + 1)) delete state.filters[child];
+    for (const child of filterOrder.slice(changedAt + 1)) {
+      if (child === "unidade" && isUnitManager()) continue;
+      delete state.filters[child];
+    }
   }
+  applyUserScopeFilters();
 }
 
 async function goBack() {
+  if (pendingLoadTimer) clearTimeout(pendingLoadTimer);
+  currentLoadId += 1;
   state.view = "inicio";
   state.viewHistory = [];
   state.filters = {};
+  applyUserScopeFilters();
   state.reportMode = "padrao";
   state.showQuestionImmersion = false;
   state.activeDiagnosticIndex = 0;
   state.dashboard = null;
   state.rows = [];
   state.options = {};
+  state.loading = false;
   render();
 }
 
@@ -1644,6 +1704,7 @@ async function login(event) {
     state.dashboard = null;
     state.rows = [];
     state.filters = {};
+    applyUserScopeFilters();
     state.options = {};
   } catch (error) {
     state.error = error.message;
@@ -1652,18 +1713,26 @@ async function login(event) {
 }
 
 async function logout() {
-  try { await api("/auth/logout", { method: "POST", body: { refreshToken: state.refreshToken } }); } catch {}
+  const refreshToken = state.refreshToken;
   logoutLocal();
   render();
+  if (refreshToken) {
+    api("/auth/logout", { method: "POST", body: { refreshToken }, auth: false }).catch(() => {});
+  }
 }
 
 function logoutLocal() {
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken");
-  Object.assign(state, { token: null, refreshToken: null, user: null, view: "inicio", dashboard: null, rows: [], filters: {}, options: {} });
+  clearApiCache();
+  Object.assign(state, { token: null, refreshToken: null, user: null, view: "inicio", dashboard: null, rows: [], filters: {}, options: {}, loading: false, loadingRequests: 0, saving: false });
 }
 
 async function loadCurrent(loadId = ++currentLoadId) {
+  if (state.view === "inicio") {
+    state.loading = false;
+    return;
+  }
   const loadingStartedAt = Date.now();
   state.loading = true;
   render();
@@ -1745,13 +1814,14 @@ async function loadCompare() {
 
 async function loadDashboard() {
   const qs = query();
-  const [optionsPayload, dashboardPayload] = await Promise.all([
-    api(`/options?${qs}`),
-    api(`/dashboard?${qs}`),
-  ]);
+  const optionsPayload = await api(`/options?${qs}`);
   applyOptionsPayload(optionsPayload);
-  state.dashboard = dashboardPayload;
   state.rows = [];
+  if (!hasReportFilters()) {
+    state.dashboard = null;
+    return;
+  }
+  state.dashboard = await api(`/dashboard?${query()}`);
 }
 
 async function loadQuality() {
@@ -2121,7 +2191,7 @@ async function api(url, options = {}) {
   } finally {
     if (showSaving) setSavingOverlay(false);
     if (showLoading) {
-      const remaining = Math.max(0, 350 - (Date.now() - loadingStartedAt));
+      const remaining = Math.max(0, 120 - (Date.now() - loadingStartedAt));
       if (remaining) await new Promise((resolve) => setTimeout(resolve, remaining));
       setLoadingOverlay(false);
     }
@@ -2153,7 +2223,7 @@ function setLoadingOverlay(value) {
   if (overlay) overlay.classList.toggle("is-visible", state.loading || state.loadingRequests > 0);
 }
 
-async function waitForMinimumLoading(startedAt, minimum = 500) {
+async function waitForMinimumLoading(startedAt, minimum = 160) {
   const remaining = Math.max(0, minimum - (Date.now() - startedAt));
   if (remaining) await new Promise((resolve) => setTimeout(resolve, remaining));
 }
@@ -2595,7 +2665,7 @@ async function download(url, filename) {
 
 function query() {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(state.filters)) {
+  for (const [key, value] of Object.entries(scopedFilters())) {
     if (Array.isArray(value)) value.forEach((item) => params.append(key, item));
     else if (value) params.set(key, value);
   }

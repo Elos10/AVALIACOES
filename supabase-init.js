@@ -861,6 +861,13 @@ async function commitImport(db, user, previewId) {
 
 function questionAnalysis(db, user, filters = {}) {
   const habilidades = db.habilidadesAplicadas || [];
+  const hasRequiredFilters = ['avaliacao', 'ano', 'disciplina'].every((key) => {
+    const value = filters[key];
+    return Array.isArray(value) ? value.length > 0 : Boolean(value);
+  });
+  if (!hasRequiredFilters) {
+    return { filters, options: questionOptions(habilidades, filters), rows: [], inconsistencias: [], kpis: {} };
+  }
   const baseFilters = { ...filters };
   delete baseFilters.questao;
   const baseRecords = filteredRecords(db, user, baseFilters);
