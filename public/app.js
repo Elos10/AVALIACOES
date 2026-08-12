@@ -1128,7 +1128,6 @@ function compareView() {
     <section class="card">
       <h3>Comparação entre avaliacoes</h3>
       <p class="muted">Selecione uma ou mais avaliacoes no filtro Avaliacao. A tabela cria uma coluna para cada avaliacao marcada, permitindo comparar a mesma unidade em momentos diferentes.</p>
-      <canvas id="compareChart"></canvas>
       ${comparisonTable(comparison)}
     </section>`;
 }
@@ -2266,7 +2265,6 @@ function drawCharts() {
     }
     drawBars("questionChart", state.dashboard.desempenhoPorQuestao, "percentual", { suffix: "%", color: "#b54708", compact: true });
     drawDonut("donutChart", state.dashboard.distribuicaoPercentualNivel, { levelPalette: true });
-    drawBars("compareChart", state.dashboard.rankingUnidades.slice(0, 10), "percentual", { suffix: "%", color: "#0057d9" });
   }
   if (state.statistics) {
     drawBars("statsLevelChart", state.statistics.distribuicaoNivel, "value", { suffix: " alunos", levelPalette: true });
