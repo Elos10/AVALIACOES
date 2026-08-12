@@ -354,6 +354,7 @@ function applyFilters(records, filters = {}) {
   return records.filter((row) => Object.entries(filterMap).every(([key, field]) => {
     const value = filters[key];
     if (!value || (Array.isArray(value) && !value.length)) return true;
+    if (key === 'disciplina') return disciplineValuesMatch(row[field], value);
     return valuesMatch(row[field], value);
   }));
 }
@@ -591,7 +592,7 @@ function statisticalAnalysis(records) {
 
 function comparisonByEvaluation(records, evaluations = []) {
   const selected = evaluations.length ? evaluations : unique(records.map((row) => row.AVALIACAO));
-  const disciplines = unique(records.map((row) => row.DISCIPLINA));
+  const disciplines = unique(records.map((row) => canonicalDiscipline(row.DISCIPLINA)).filter(Boolean));
   const units = unique(records.map((row) => row.UNIDADE));
   return {
     evaluations: selected,
@@ -601,7 +602,11 @@ function comparisonByEvaluation(records, evaluations = []) {
       for (const evaluation of selected) {
         row[evaluation] = {};
         for (const discipline of disciplines) {
-          const scoped = records.filter((item) => item.UNIDADE === unit && item.AVALIACAO === evaluation && item.DISCIPLINA === discipline);
+          const scoped = records.filter((item) => (
+            valuesMatch(item.UNIDADE, unit) &&
+            valuesMatch(item.AVALIACAO, evaluation) &&
+            disciplineComparable(item.DISCIPLINA) === disciplineComparable(discipline)
+          ));
           const possiveis = sum(scoped, 'PONTOS POSSIVEIS');
           row[evaluation][discipline] = {
             percentual: possiveis ? round((sum(scoped, 'PONTOS') / possiveis) * 100) : 0,
@@ -612,6 +617,13 @@ function comparisonByEvaluation(records, evaluations = []) {
       return row;
     }),
   };
+}
+
+function canonicalDiscipline(value) {
+  const comparable = disciplineComparable(value);
+  if (comparable === 'LINGUAPORTUGUESA') return 'LINGUA PORTUGUESA';
+  if (comparable === 'MATEMATICA') return 'MATEMATICA';
+  return String(value || '').trim();
 }
 
 function quality(records) {

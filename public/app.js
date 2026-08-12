@@ -2725,7 +2725,15 @@ function comparisonTable(comparison) {
 }
 
 function findDisciplineKey(disciplines = [], target) {
-  return disciplines.find((discipline) => normalizeLevel(discipline) === target) || "";
+  const targetKey = disciplineKey(target);
+  return disciplines.find((discipline) => disciplineKey(discipline) === targetKey) || "";
+}
+
+function disciplineKey(value) {
+  const normalized = normalizeLevel(value).replace(/[^A-Z0-9]/g, "");
+  if (["PORTUGUES", "LINGUAPORTUGUESA", "LINGUAPORTUGUES", "LP"].includes(normalized)) return "LINGUAPORTUGUESA";
+  if (normalized === "MATEMATICA") return "MATEMATICA";
+  return normalized;
 }
 
 function chartCard(title, id) {
